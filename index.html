@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nouvita HR Review</title>
+<!--
+  Nouvita HR review page -- P65 280926v1 (library projects/nouvita/hr-review/index.html)
+  Live, signed-in page over Supabase project tdhggqurzrmlchzthkrw. Holds NO data: every row is
+  fetched after Microsoft Entra sign-in and every read/write is decided by RLS in nouvita_hr
+  (app_user ACL; staff = admin|hr). Tag correction writes sona_form, sona_tag, needs_review with
+  classified_by='human' (enforced by policy document_update_staff). Files open through 2-minute
+  signed URLs from the private bucket nouvita-hr (policy nvhr_files_read_staff).
+  Every file open and every re-tag is written to nouvita_hr.access_log.
+  DEPLOY: set SUPABASE_KEY below to the project's PUBLISHABLE (anon) key -- never the secret or
+  service_role key. Add this page's URL to Supabase Auth > URL Configuration > Redirect URLs, and
+  make sure nouvita_hr is listed under Data API > Exposed schemas.
+-->
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --ink:#15181d; --muted:#616a75; --line:#e2e6eb;
+  --accent:#1f5f8b; --accent-ink:#fff; --accent-soft:#e8f0f6; --warn:#8a5a00; --warn-soft:#fdf3e0;
+  --bad:#8c2f2f; --bad-soft:#fbeaea; --ok:#1f6b45; --ok-soft:#e7f4ed; --human:#5b3f99; --human-soft:#efeaf8;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12151a; --card:#1a1f26; --ink:#e8ecf1; --muted:#96a1ad; --line:#2a313a;
+  --accent:#7ab6e0; --accent-ink:#0d1a24; --accent-soft:#1c2b38; --warn:#e0b46a; --warn-soft:#332a18;
+  --bad:#e68b8b; --bad-soft:#331e1e; --ok:#7fd0a5; --ok-soft:#162a20; --human:#c2adf0; --human-soft:#2a2238;
+}}
+:root[data-theme="dark"]{
+  --bg:#12151a; --card:#1a1f26; --ink:#e8ecf1; --muted:#96a1ad; --line:#2a313a;
+  --accent:#7ab6e0; --accent-ink:#0d1a24; --accent-soft:#1c2b38; --warn:#e0b46a; --warn-soft:#332a18;
+  --bad:#e68b8b; --bad-soft:#331e1e; --ok:#7fd0a5; --ok-soft:#162a20; --human:#c2adf0; --human-soft:#2a2238;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+header h1{font-size:22px;margin:0}
+.who{color:var(--muted);font-size:13px;display:flex;gap:10px;align-items:center}
+button{font:inherit;font-size:14px;border-radius:8px;padding:8px 14px;cursor:pointer;
+  border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.link{border:0;background:none;padding:2px 4px;color:var(--accent);font-size:13px}
+button:disabled{opacity:.55;cursor:default}
+.gate{max-width:440px;margin:12vh auto;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:28px;text-align:center}
+.gate h1{font-size:20px;margin:0 0 8px}
+.gate p{color:var(--muted);margin:0 0 20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:20px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat b{display:block;font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:12px}
+.controls{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;z-index:5}
+input[type=search],input[type=text],select{background:var(--bg);color:var(--ink);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;max-width:100%}
+input[type=search]{flex:1 1 240px;min-width:0}
+.count{color:var(--muted);font-size:13px;margin-left:auto}
+.emp{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:10px;overflow:hidden}
+.emp>summary{cursor:pointer;padding:12px 14px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;list-style:none}
+.emp>summary::-webkit-details-marker{display:none}
+.emp>summary:hover{background:var(--accent-soft)}
+.name{font-weight:600}
+.num{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.pill{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.p-count{background:var(--accent-soft);color:var(--accent)}
+.p-rev{background:var(--warn-soft);color:var(--warn)}
+.p-not{background:var(--bad-soft);color:var(--bad)}
+.p-human{background:var(--human-soft);color:var(--human)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 14px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+td.f{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;word-break:break-all;min-width:180px}
+td.act{white-space:nowrap;text-align:right}
+.tag{font-size:12px;padding:1px 8px;border-radius:999px;background:var(--ok-soft);color:var(--ok);display:inline-block}
+.tag.none{background:var(--warn-soft);color:var(--warn)}
+.tag.human{background:var(--human-soft);color:var(--human)}
+.form{color:var(--muted);font-size:12px}
+.flag{color:var(--warn);font-size:12px}
+.edit{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.edit select,.edit input{font-size:13px;padding:6px 8px}
+.err{color:var(--bad);font-size:12.5px}
+.more{display:block;margin:16px auto 0}
+.empty{padding:40px 14px;text-align:center;color:var(--muted)}
+.banner{background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:12px 14px;margin-top:16px}
+.banner.info{background:var(--accent-soft);color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+[hidden]{display:none!important}
+@media(max-width:640px){.controls{position:static} th.hide-sm,td.hide-sm{display:none}}
+</style></head><body>
+
+<div class="gate" id="gate" hidden>
+  <h1>Nouvita HR records</h1>
+  <p id="gateMsg">Sign in with your Nouvita Microsoft account to review recovered HR records.</p>
+  <button class="primary" id="signIn">Sign in with Microsoft</button>
+  <p id="gateErr" class="err" style="margin-top:14px" hidden></p>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1>Nouvita HR &mdash; recovered records</h1>
+    <div class="who"><span id="whoami"></span><button class="link" id="signOut">Sign out</button></div>
+  </header>
+  <div id="banner"></div>
+  <div class="stats" id="stats"></div>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Search a name, staff number or file&hellip;" autocomplete="off" aria-label="Search">
+    <select id="fForm" aria-label="Sona form"></select>
+    <select id="fTag" aria-label="Tag"></select>
+    <select id="fStatus" aria-label="Status">
+      <option value="">All documents</option>
+      <option value="rev">Needs review</option>
+      <option value="untagged">Untagged</option>
+      <option value="notemp">Not an employee record</option>
+      <option value="human">Corrected by HR</option>
+      <option value="insona">Already in Sona</option>
+    </select>
+    <span class="count" id="count"></span>
+  </div>
+  <div id="list"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://tdhggqurzrmlchzthkrw.supabase.co';
+const SUPABASE_KEY = '__PUBLISHABLE_KEY__';   // publishable (anon) key only
+const BUCKET = 'nouvita-hr';
+const PAGE = 1000, EMP_BATCH = 60;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n).toLocaleString('en-GB');
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),3200); }
+
+if (SUPABASE_KEY.startsWith('__')) {
+  document.body.innerHTML = '<div class="gate"><h1>Not configured</h1><p>Set SUPABASE_KEY in this page to the project\'s publishable key.</p></div>';
+  throw new Error('SUPABASE_KEY not set');
+}
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:true, detectSessionInUrl:true, flowType:'pkce'}});
+const hr = sb.schema('nouvita_hr');
+
+const S = { user:null, role:null, docs:[], byEmp:new Map(), emps:{}, pairs:new Map(), shown:EMP_BATCH, open:new Set() };
+
+$('signIn').onclick = async () => {
+  $('gateErr').hidden = true;
+  const { error } = await sb.auth.signInWithOAuth({ provider:'azure',
+    options:{ scopes:'email', redirectTo: location.origin + location.pathname } });
+  if (error) { $('gateErr').textContent = error.message; $('gateErr').hidden = false; }
+};
+$('signOut').onclick = async () => { await sb.auth.signOut(); location.replace(location.pathname); };
+
+async function start() {
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) { $('gate').hidden = false; return; }
+  S.user = session.user;
+  const { data:role, error } = await hr.rpc('current_role_name');
+  if (error) return fatal(apiHint(error));
+  if (!role) {
+    $('gate').hidden = false; $('signIn').hidden = true;
+    $('gateMsg').innerHTML = `Signed in as <b>${esc(S.user.email)}</b>, but this account is not on the HR access list. Ask an administrator to add you.`;
+    const b = document.createElement('button'); b.textContent = 'Sign out'; b.onclick = $('signOut').onclick;
+    $('gate').appendChild(b); return;
+  }
+  S.role = role;
+  if (role === 'employee') {
+    $('gate').hidden = false; $('signIn').hidden = true;
+    $('gateMsg').textContent = 'This review page is for HR staff. Your account has employee access only.'; return;
+  }
+  $('app').hidden = false;
+  $('whoami').textContent = `${S.user.email} · ${role}`;
+  $('list').innerHTML = '<div class="empty">Loading records&hellip;</div>';
+  try { await load(); } catch (e) { return fatal(apiHint(e)); }
+  buildFilters(); render();
+}
+
+function apiHint(e) {
+  const m = e?.message || String(e);
+  if (/schema must be one of|Invalid schema/i.test(m))
+    return 'The HR schema is not exposed to the API. In Supabase: Project Settings → Data API → Exposed schemas, add nouvita_hr.';
+  return m;
+}
+function fatal(msg) {
+  $('gate').hidden = true; $('app').hidden = false;
+  $('banner').innerHTML = `<div class="banner">${esc(msg)}</div>`;
+  $('list').innerHTML = '';
+}
+
+async function pageAll(build) {
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < PAGE) return out;
+  }
+}
+
+async function load() {
+  const [emps, docs] = await Promise.all([
+    pageAll(() => hr.from('employee').select('employee_number,display_name').order('employee_number')),
+    pageAll(() => hr.from('document').select(
+      'id,employee_number,file_name,file_ext,file_bytes,modified_at,sona_form,sona_tag,needs_review,is_employee_record,classified_by,storage_path,sona_loaded_at'
+    ).order('id')),
+  ]);
+  for (const e of emps) S.emps[e.employee_number] = e.display_name || '';
+  S.docs = docs;
+  S.byEmp = new Map();
+  for (const d of docs) {
+    const k = d.employee_number || '(none)';
+    if (!S.byEmp.has(k)) S.byEmp.set(k, []);
+    S.byEmp.get(k).push(d);
+  }
+  rebuildPairs();
+}
+
+function rebuildPairs() {
+  S.pairs = new Map();
+  for (const d of S.docs) if (d.sona_form && d.sona_tag) {
+    if (!S.pairs.has(d.sona_form)) S.pairs.set(d.sona_form, new Set());
+    S.pairs.get(d.sona_form).add(d.sona_tag);
+  }
+}
+
+const isHuman = d => d.classified_by === 'human';
+const isRev = d => d.needs_review || !d.sona_tag;
+
+function renderStats() {
+  const docs = S.docs, n = docs.length;
+  const tagged = docs.filter(d => d.sona_tag).length;
+  const s = [
+    [fmt(n), 'documents'],
+    [fmt(S.byEmp.size), 'employees'],
+    [fmt(tagged) + ` <span style="font-size:13px;color:var(--muted)">(${n ? (100*tagged/n).toFixed(1) : 0}%)</span>`, 'tagged'],
+    [fmt(docs.filter(isRev).length), 'need review'],
+    [fmt(docs.filter(isHuman).length), 'corrected by HR'],
+    [fmt(docs.filter(d => d.sona_loaded_at).length), 'in Sona'],
+  ];
+  $('stats').innerHTML = s.map(x => `<div class="stat"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+}
+
+function buildFilters() {
+  const fc = {}, tc = {};
+  for (const d of S.docs) { fc[d.sona_form||''] = (fc[d.sona_form||'']||0)+1; tc[d.sona_tag||''] = (tc[d.sona_tag||'']||0)+1; }
+  const opts = (c, all, none) => `<option value="">${all}</option>` +
+    Object.keys(c).filter(Boolean).sort().map(k => `<option value="${esc(k)}">${esc(k)} (${fmt(c[k])})</option>`).join('') +
+    (c[''] ? `<option value="__none__">${none} (${fmt(c[''])})</option>` : '');
+  const keepF = $('fForm').value, keepT = $('fTag').value;
+  $('fForm').innerHTML = opts(fc, 'All forms', '(no form)');
+  $('fTag').innerHTML = opts(tc, 'All tags', '(untagged)');
+  $('fForm').value = keepF; $('fTag').value = keepT;
+}
+
+function keep(d) {
+  const f = $('fForm').value, t = $('fTag').value;
+  if (f === '__none__' ? d.sona_form : (f && d.sona_form !== f)) return false;
+  if (t === '__none__' ? d.sona_tag : (t && d.sona_tag !== t)) return false;
+  switch ($('fStatus').value) {
+    case 'rev': return isRev(d);
+    case 'untagged': return !d.sona_tag;
+    case 'notemp': return d.is_employee_record === false;
+    case 'human': return isHuman(d);
+    case 'insona': return !!d.sona_loaded_at;
+  }
+  return true;
+}
+
+function matches() {
+  const term = $('q').value.trim().toLowerCase();
+  const res = [];
+  const keys = [...S.byEmp.keys()].sort((a,b) => (S.emps[a]||'').localeCompare(S.emps[b]||'') || a.localeCompare(b));
+  for (const k of keys) {
+    const name = S.emps[k] || '';
+    const empHit = !term || name.toLowerCase().includes(term) || k.toLowerCase().includes(term);
+    let rows = S.byEmp.get(k).filter(keep);
+    if (term && !empHit) rows = rows.filter(d =>
+      (d.file_name||'').toLowerCase().includes(term) || (d.sona_tag||'').toLowerCase().includes(term));
+    if (rows.length) res.push([k, rows]);
+  }
+  return res;
+}
+
+function render() {
+  renderStats();
+  const res = matches();
+  const nDocs = res.reduce((a, r) => a + r[1].length, 0);
+  $('count').textContent = `${fmt(nDocs)} document${nDocs===1?'':'s'} across ${fmt(res.length)} employee${res.length===1?'':'s'}`;
+  if (!res.length) { $('list').innerHTML = '<div class="empty">Nothing matches that.</div>'; return; }
+  const term = $('q').value.trim();
+  $('list').innerHTML = res.slice(0, S.shown).map(([k, rows], i) => {
+    const nRev = rows.filter(isRev).length, nNot = rows.filter(d => d.is_employee_record === false).length,
+          nHum = rows.filter(isHuman).length;
+    const open = S.open.has(k) || (term && i < 3);
+    return `<details class="emp" data-k="${esc(k)}"${open ? ' open' : ''}>` +
+      `<summary><span class="name">${esc(S.emps[k] || '(no name on folder)')}</span>` +
+      `<span class="num">#${esc(k)}</span>` +
+      `<span class="pill p-count">${fmt(rows.length)} document${rows.length===1?'':'s'}</span>` +
+      (nRev ? `<span class="pill p-rev">${nRev} to review</span>` : '') +
+      (nHum ? `<span class="pill p-human">${nHum} corrected</span>` : '') +
+      (nNot ? `<span class="pill p-not">${nNot} not an HR record</span>` : '') +
+      `</summary><div class="body">${open ? table(rows) : ''}</div></details>`;
+  }).join('') + (res.length > S.shown
+    ? `<button class="more" id="more">Show more (${fmt(res.length - S.shown)} more employees)</button>` : '');
+  const more = $('more'); if (more) more.onclick = () => { S.shown += EMP_BATCH; render(); };
+  document.querySelectorAll('details.emp').forEach(el => el.addEventListener('toggle', () => {
+    const k = el.dataset.k;
+    if (el.open) { S.open.add(k); const body = el.querySelector('.body');
+      if (!body.innerHTML) body.innerHTML = table(S.byEmp.get(k).filter(keep)); }
+    else S.open.delete(k);
+  }));
+}
+
+function table(rows) {
+  rows = [...rows].sort((a,b) => (a.sona_form||'￿').localeCompare(b.sona_form||'￿') ||
+    (a.sona_tag||'￿').localeCompare(b.sona_tag||'￿') || (a.file_name||'').localeCompare(b.file_name||''));
+  return `<div class="tablewrap"><table><thead><tr><th>File</th><th>Form &amp; tag</th><th class="hide-sm">Modified</th><th></th></tr></thead><tbody>` +
+    rows.map(row).join('') + `</tbody></table></div>`;
+}
+
+function row(d) {
+  const cls = !d.sona_tag ? 'tag none' : isHuman(d) ? 'tag human' : 'tag';
+  const when = d.modified_at ? new Date(d.modified_at).toLocaleDateString('en-GB') : '';
+  return `<tr data-id="${d.id}"><td class="f">${esc(d.file_name)}</td>` +
+    `<td><span class="${cls}">${esc(d.sona_tag || 'untagged')}</span>` +
+    `<div class="form">${esc(d.sona_form || 'no form')}${isHuman(d) ? ' · corrected by HR' : ''}</div>` +
+    (d.needs_review ? `<div class="flag">Flagged for review</div>` : '') +
+    (d.is_employee_record === false ? `<div class="flag">Not an employee record</div>` : '') +
+    `<div class="slot"></div></td>` +
+    `<td class="hide-sm">${esc(when)}</td>` +
+    `<td class="act"><button class="link" data-a="open">Open</button><button class="link" data-a="edit">Re-tag</button></td></tr>`;
+}
+
+$('list').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-a]'); if (!btn) return;
+  const tr = btn.closest('tr'); const d = S.docs.find(x => x.id === Number(tr.dataset.id)); if (!d) return;
+  if (btn.dataset.a === 'open') return openFile(d, btn);
+  if (btn.dataset.a === 'edit') return editor(d, tr);
+});
+
+async function openFile(d, btn) {
+  if (!d.storage_path) return toast('No file is held for this record.');
+  const w = window.open('', '_blank');   // open synchronously so pop-up blockers allow it
+  btn.disabled = true;
+  const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(d.storage_path, 120);
+  btn.disabled = false;
+  if (error) { if (w) w.close(); return toast('Could not open file: ' + error.message); }
+  log('open_file', d.id, d.file_name);
+  if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+}
+
+function editor(d, tr) {
+  const slot = tr.querySelector('.slot');
+  if (slot.innerHTML) { slot.innerHTML = ''; return; }
+  const forms = [...S.pairs.keys()].sort();
+  const cur = d.sona_form || forms[0] || '';
+  slot.innerHTML = `<div class="edit">
+      <select data-f aria-label="Form">${forms.map(f => `<option${f===cur?' selected':''}>${esc(f)}</option>`).join('')}</select>
+      <select data-t aria-label="Tag"></select>
+      <input type="text" data-new placeholder="New tag name" hidden aria-label="New tag">
+      <label class="form"><input type="checkbox" data-rev${d.needs_review ? '' : ' checked'}> reviewed</label>
+      <button class="primary" data-save>Save</button><button data-cancel>Cancel</button>
+    </div><div class="err" data-err></div>`;
+  const fSel = slot.querySelector('[data-f]'), tSel = slot.querySelector('[data-t]'), nIn = slot.querySelector('[data-new]');
+  const fillTags = () => {
+    const tags = [...(S.pairs.get(fSel.value) || [])].sort();
+    const want = fSel.value === d.sona_form ? d.sona_tag : tags[0];
+    tSel.innerHTML = tags.map(t => `<option${t===want?' selected':''}>${esc(t)}</option>`).join('') +
+      `<option value="__other__">Other (type a new tag)…</option>`;
+    nIn.hidden = tSel.value !== '__other__';
+  };
+  fSel.onchange = fillTags; tSel.onchange = () => { nIn.hidden = tSel.value !== '__other__'; if (!nIn.hidden) nIn.focus(); };
+  fillTags();
+  slot.querySelector('[data-cancel]').onclick = () => { slot.innerHTML = ''; };
+  slot.querySelector('[data-save]').onclick = async ev => {
+    const form = fSel.value;
+    const tag = tSel.value === '__other__' ? nIn.value.trim() : tSel.value;
+    const err = slot.querySelector('[data-err]');
+    if (!tag) { err.textContent = 'Enter a tag name.'; return; }
+    const patch = { sona_form: form, sona_tag: tag, needs_review: !slot.querySelector('[data-rev]').checked,
+                    classified_by: 'human', classified_at: new Date().toISOString() };
+    ev.target.disabled = true;
+    const { data, error } = await hr.from('document').update(patch).eq('id', d.id).select('id');
+    ev.target.disabled = false;
+    if (error) { err.textContent = error.message; return; }
+    if (!data || !data.length) { err.textContent = 'Not saved: your account is not permitted to change this record.'; return; }
+    log('retag', d.id, `${d.sona_form||''} :: ${d.sona_tag||''} -> ${form} :: ${tag}`);
+    Object.assign(d, patch);
+    rebuildPairs(); buildFilters();
+    tr.outerHTML = row(d);
+    renderStats();
+    toast('Saved');
+  };
+}
+
+function log(action, document_id, detail) {
+  hr.from('access_log').insert({ user_id: S.user.id, action, document_id, detail })
+    .then(({ error }) => { if (error) console.warn('access_log', error.message); });
+}
+
+let t0;
+$('q').addEventListener('input', () => { clearTimeout(t0); t0 = setTimeout(() => { S.shown = EMP_BATCH; render(); }, 150); });
+['fForm','fTag','fStatus'].forEach(id => $(id).addEventListener('change', () => { S.shown = EMP_BATCH; render(); }));
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') location.replace(location.pathname); });
+start();
+</script></body></html>
