@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baldock staffing questions</title>
+<!--
+Baldock staffing questionnaire -- 211126v2. Hosted on nouvita-group GitHub Pages at hr-review/baldock-staffing/
+with its OWN sign-in session and its OWN access list (nouvita_survey.invite); it grants no HR access.
+Holds NO data: answers are saved to Supabase project tdhggqurzrmlchzthkrw, schema nouvita_survey, after Microsoft
+Entra sign-in. RLS: invited people read all answers and change only their own; admin/inviters manage the list.
+Uses the PUBLISHABLE (anon) key only. Setup: nouvita_survey_baldock_211126v2.sql.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, plain, kind – a ward form someone fills in between tasks, never a test.
+IDEA: the paper ward handover sheet – one clear column, ruled sections, tick boxes.
+PICTURE: the form itself, with a progress strip showing the six sections.
+COLOUR and TYPE: white ground, deep ink, one clinical teal for actions; Figtree throughout.
+LAYOUT: single 720px column, sticky progress strip, big tap targets, stacks naturally on phones. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1a1f);--panel:light-dark(#f3f7f8,#16252c);--ink:light-dark(#10232c,#e7f0f2);--muted:light-dark(#4f6670,#9db3bb);--line:light-dark(#d5e1e5,#2a3d45);--acc:light-dark(#00756d,#3cc3b6);--accInk:light-dark(#ffffff,#06201d);--warn:light-dark(#a44200,#ffb27a);--ok:light-dark(#1d7a3a,#7fd69a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Figtree,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:760px;margin:0 auto;padding:0 max(4vw,16px) 80px}
+header.top{padding:32px 0 8px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.08;margin:0 0 10px;font-weight:800;text-wrap:balance}
+h2{font-size:24px;line-height:1.15;margin:0 0 6px;font-weight:800}
+h3{font-size:18px;margin:18px 0 6px;font-weight:600}
+p{margin:0 0 12px}.muted{color:var(--muted)}.small{font-size:14px}
+.strip{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+.steps{display:flex;gap:6px;overflow-x:auto}
+.steps button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 14px;font:600 15px Figtree,sans-serif;min-height:44px;cursor:pointer}
+.steps button[aria-current=true]{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.steps button.done::after{content:" ✓"}
+.save{font-size:14px;color:var(--muted);margin-top:6px;min-height:20px}
+section.step{padding-top:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+label.f{display:block;font-weight:600;margin:12px 0 6px}
+input[type=text],input[type=number],input[type=date],textarea,select{width:100%;font:16px Figtree,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+textarea{min-height:84px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.choices{display:flex;flex-wrap:wrap;gap:8px}
+.choices button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 14px;font:600 16px Figtree,sans-serif;min-height:44px;cursor:pointer}
+.choices button[aria-pressed=true]{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.btn{border:0;background:var(--acc);color:var(--accInk);border-radius:12px;padding:12px 18px;font:700 16px Figtree,sans-serif;min-height:48px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.btn.small{padding:8px 12px;min-height:40px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.sona{border-left:4px solid var(--acc);padding:8px 12px;margin:8px 0 10px;background:var(--bg);border-radius:0 8px 8px 0;font-size:15px}
+.sona b{color:var(--acc)}
+table.days{width:100%;border-collapse:collapse;font-size:15px}
+table.days th{text-align:left;font-weight:600;color:var(--muted);padding:6px 4px;font-size:13px}
+table.days td{padding:4px;white-space:nowrap}
+table.days input{min-height:40px;text-align:center;padding:6px}
+table.days td.d{white-space:nowrap;font-weight:600}
+details.week{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:var(--bg)}
+details.week summary{cursor:pointer;padding:12px 14px;font-weight:600;min-height:44px}
+details.week .in{padding:0 10px 12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:600px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:minmax(0,1fr)}body{font-size:16px}}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 20px Figtree,sans-serif;cursor:pointer}
+.stepper output{min-width:2ch;text-align:center;font-weight:800;font-size:20px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:13px}
+.banner{border:1px solid var(--warn);color:var(--warn);border-radius:12px;padding:12px 14px;margin:12px 0}
+.okmsg{border:1px solid var(--ok);color:var(--ok);border-radius:12px;padding:12px 14px;margin:12px 0}
+ul.check{list-style:none;padding:0;margin:0}ul.check li{margin:6px 0}
+ul.check label{display:flex;gap:10px;align-items:flex-start;min-height:44px;cursor:pointer}
+ul.check input{width:22px;height:22px;margin-top:3px;flex:none}
+.foot{margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+.gate{max-width:460px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:center}
+.gate h1{font-size:26px}.who{display:flex;gap:10px;align-items:center;justify-content:flex-end;font-size:14px;color:var(--muted);padding-top:10px}
+.linkbtn{border:0;background:none;color:var(--acc);font:600 14px Figtree,sans-serif;cursor:pointer;min-height:44px;padding:0 6px}
+[hidden]{display:none!important}
+.others{border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin:8px 0 10px;font-size:15px}
+.others ul{margin:4px 0 0;padding-left:18px}.others li{margin:3px 0}
+table.days input::placeholder{color:var(--muted);opacity:.8}
+.plist{list-style:none;padding:0;margin:8px 0 0}.plist li{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:8px 0}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+<h1>Baldock staffing questions</h1>
+<p id="gateMsg">Sign in with your Nouvita Microsoft account to answer.</p>
+<button class="btn" id="signIn" type="button">Sign in with Microsoft</button>
+<p id="gateErr" class="banner" hidden></p>
+</div>
+<div id="app" hidden>
+<div class="strip"><div class="wrap" style="padding-bottom:0">
+<nav class="steps" id="steps" aria-label="Sections"></nav>
+<div class="save" id="save" aria-live="polite"></div>
+</div></div>
+<main class="wrap">
+<div class="who"><span id="whoami"></span><button class="linkbtn" id="refresh" type="button">Refresh others' answers</button><button class="linkbtn" id="signOut" type="button">Sign out</button></div>
+<div class="card" id="reviewer" hidden>
+<h3 style="margin-top:0">People helping with this questionnaire</h3>
+<p class="small muted" id="invHelp">Invite anyone at Baldock who can add to the picture. They sign in with their Nouvita Microsoft account and can see everyone's answers, but can only change their own.</p>
+<div class="grid2"><div><label class="f" for="invEmail">Their Nouvita email</label><input type="text" id="invEmail" placeholder="firstname.lastname@nouvita.co.uk" autocomplete="off"></div>
+<div><label class="f" for="invName">Name and role (optional)</label><input type="text" id="invName" placeholder="e.g. Sam Lee, Mulberry ward manager"></div></div>
+<div id="invRoleBox" hidden><label class="f">Invite them as</label><div class="choices" id="invRole"><button type="button" data-v="inviter" aria-pressed="true">Inviter – can invite others and answer</button><button type="button" data-v="contributor" aria-pressed="false">Contributor – answers only</button></div></div>
+<div class="row"><button class="btn" id="invAdd" type="button">Invite</button><button class="btn ghost" id="copyLink" type="button">Copy the link to send them</button></div>
+<p id="invMsg" class="small" aria-live="polite"></p>
+<ul class="plist" id="invList"></ul>
+<p id="revCount" class="muted" style="margin-top:12px"></p>
+<div class="row"><button class="btn ghost" id="dlAll" type="button">Download all answers (for the workbook)</button></div>
+</div>
+<header class="top" id="intro">
+<h1>Baldock staffing: what is really happening on the wards</h1>
+<p>We are checking the Sona rota for October and November against what the wards actually need. Sona shows the shifts, but it cannot show how many patients were on each ward, who needs 1:1, or why. Only you can tell us that.</p>
+<p><b>Several people are helping with this.</b> Under each question you'll see what others have already said. You can't change their answers – just add what you know, even if it's only one part.</p>
+<p class="muted">There are no right or wrong answers. If you don't know, tap <b>Not sure</b> and say who might. You can stop at any time – your answers save as you go – and come back later on any device. Never write patient names: use initials or a reference.</p>
+<div id="nodb" class="banner" hidden>Your answers can't be saved just now. Keep going – they stay on this screen – and use “Copy my answers” at the end to email them if saving doesn't come back.</div>
+</header>
+<!-- 1 YOU -->
+<section class="step" id="s-you" data-title="About you">
+<h2>1. About you</h2>
+<div class="card">
+<label class="f" for="you-name">Your name</label><input type="text" id="you-name" data-k="you.name" autocomplete="name">
+<label class="f" for="you-role">Your role</label><input type="text" id="you-role" data-k="you.role" placeholder="e.g. Ward manager, Burberry">
+<label class="f" for="you-help">Who else helped answer? (optional)</label><input type="text" id="you-help" data-k="you.helpers">
+</div>
+</section>
+<!-- 2 PATIENTS -->
+<section class="step" id="s-census" data-title="Patients">
+<h2>2. How many patients were on each ward?</h2>
+<p>Start with the usual numbers. Then open each week and change only the days that were different. If a ward was closed, put 0.</p>
+<div class="sona">Sona shows staff on <b>Burberry, Mulberry and – from 13 November – Oakley</b>. The finance report puts every patient on Burberry, so we need the real split.</div>
+<p class="small muted">Grey numbers in the boxes are what someone else has entered. Leave them if they're right, or type your own.</p>
+<div class="card">
+<h3>Usual number of patients</h3>
+<div class="grid2" id="usual"></div>
+<div class="row"><button class="btn" id="fillUsual" type="button">Fill empty days with these numbers</button></div>
+<p class="small muted" style="margin-top:10px">This only fills days you haven't typed in. Then check each week below.</p>
+</div>
+<div id="weeks"></div>
+<div class="card">
+<label class="f" for="census-src">Where did these numbers come from?</label>
+<div class="choices" data-k="census.source" data-opts="Bed state sheets|Handover sheets|Admissions log|My memory / estimate|Other"></div>
+<label class="f" for="census-note">Anything we should know (ward moves, leave, admissions)?</label>
+<textarea id="census-note" data-k="census.note"></textarea>
+<ul class="check"><li><label><input type="checkbox" data-k="census.canSend"> I can send the bed state or handover sheets instead (remove names first)</label></li></ul>
+</div>
+</section>
+<!-- 3 ONE TO ONE -->
+<section class="step" id="s-oneone" data-title="1:1 patients">
+<h2>3. Patients who need 1:1 (or more)</h2>
+<p>Add one card for each patient on 1:1, 2:1 or more in October or November. If their observation level changed, add a new card for each change. <b>If a patient needs 1:1 to manage their presentation or treatment, it counts as needed – whether it is funded or not.</b></p>
+<div class="sona">Sona had about <b>4 to 5 staff on 1:1 on every shift</b> in October and November, day and night. No 1:1 shift is linked to a patient, so we can't tell who it was for.</div>
+<div id="othersPts"></div>
+<div id="patients"></div>
+<div class="row"><button class="btn" id="addPt" type="button">+ Add a patient</button></div>
+<div class="card" style="margin-top:18px">
+<ul class="check"><li><label><input type="checkbox" data-k="oneone.canSend"> I can send observation records, MDT decisions or funding letters instead (remove names first)</label></li></ul>
+</div>
+</section>
+<!-- 4 HOW THE ROTA IS SET -->
+<section class="step" id="s-need" data-title="How the rota is set">
+<h2>4. How the rota is set, and what you really staff with</h2>
+<p>For each ward, here is what the Sona rota <b>proposed</b> (all shifts on the rota, filled or not) and what was <b>actually filled</b>, as the average number of staff on a shift. Tell us if it's right, what it's based on, and what you think is really needed.</p>
+<div id="needWards"></div>
+<div class="card">
+<h3 style="margin-top:0">What is the rota based on? Tick all that apply.</h3>
+<div id="othersBasis"></div>
+<div class="choices" data-k="basis.methods" data-multi="1" data-opts="Safe staffing policy|Acuity or dependency tool (e.g. MHOST)|Commissioner contract or specification|RC or MDT instruction|Number of patients on the ward|Patients' observation levels|Previous rota carried forward|CQC registration conditions|Not sure"></div>
+<label class="f" for="b-who">Who sets the rota template in Sona, and when was it last reviewed?</label>
+<input type="text" id="b-who" data-k="basis.who" placeholder="e.g. Rota coordinator with ward manager, reviewed June">
+<label class="f" for="b-doc">Is the basis written down? Give the name of the policy, tool or document.</label>
+<input type="text" id="b-doc" data-k="basis.doc" placeholder="e.g. Safe Staffing Policy v3; MHOST scores; ICB service spec">
+<label class="f" for="b-change">When patients change (admission, discharge, obs level reduced), how and when does the rota change?</label>
+<textarea id="b-change" data-k="basis.change"></textarea>
+<label class="f" for="need-more">What changes if a ward has more patients, or a very unwell patient?</label>
+<textarea id="need-more" data-k="need.more"></textarea>
+</div>
+</section>
+<!-- 5 QUESTIONS -->
+<section class="step" id="s-q" data-title="Questions">
+<h2>5. A few questions</h2>
+<p>Tap an answer, then add a few words if you can. If something would show it better than words – a rota, a policy, a letter – say what it is.</p>
+<div id="qs"></div>
+</section>
+<!-- 6 FINISH -->
+<section class="step" id="s-end" data-title="Finish">
+<h2>6. Documents and finish</h2>
+<div class="card">
+<h3>What could you send us? Tick all you have.</h3>
+<ul class="check" id="docs"></ul>
+<label class="f" for="docs-other">Anything else, or a better way to get this information?</label>
+<textarea id="docs-other" data-k="docs.other" placeholder="e.g. “Easier to talk it through – ring me Tuesday”"></textarea>
+<ul class="check"><li><label><input type="checkbox" data-k="docs.call"> I'd rather go through this on a call or in person</label></li></ul>
+</div>
+<div class="card">
+<h3>Your progress</h3>
+<p id="summary"></p>
+<div class="row">
+<button class="btn" id="submit" type="button">I've finished – send my answers</button>
+<button class="btn ghost" id="copy" type="button">Copy my answers</button>
+</div>
+<div id="done" class="okmsg" hidden>Thank you. Your answers have been sent. You can still come back and change them.</div>
+<p class="small muted" style="margin-top:10px">“Copy my answers” copies everything as text, so you can paste it into an email if saving doesn't work.</p>
+</div>
+</section>
+</div>
+<p class="small muted foot" style="max-width:760px;margin:0 auto;padding:0 16px 40px">Your answers are seen by the people helping with this questionnaire and the central finance team. Only you can change them. Shift figures are from Sona, 1 October – 30 November 2026; shifts from 21 November are the planned rota.</p>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+{
+const SUPABASE_URL='https://tdhggqurzrmlchzthkrw.supabase.co';
+const SUPABASE_KEY='sb_publishable_1CT22NudqbxuFN3DqqVRig_vbCm-pdU'; // publishable (anon) key only
+const SURVEY='baldock-oct-nov-2026';
+const WARDS=['Burberry','Mulberry','Oakley'];
+const TPL={"Nov": {"Burberry": {"Day": {"nurses": [1.4, 0.6], "oneone": [2.6, 2.4], "support": [1.4, 1.4]}, "Night": {"nurses": [0.6, 0.6], "oneone": [3.2, 2.4], "support": [0.8, 0.8]}}, "Central": {"Day": {"support": [0.1, 0.1]}, "Night": {"nightmgr": [0.9, 0.5], "support": [0.3, 0.3]}}, "Mulberry": {"Day": {"nurses": [1.4, 1.1], "oneone": [2.9, 2.6], "support": [0.3, 0.3]}, "Night": {"nurses": [1.8, 1.4], "oneone": [1.7, 1.4], "support": [1.4, 1.4]}}, "Oakley": {"Day": {"nurses": [0.0, 0.0], "oneone": [0.4, 0.0], "support": [0.3, 0.3]}, "Night": {"nurses": [0.1, 0.1], "oneone": [0.2, 0.2], "support": [0.4, 0.4]}}}, "Nov planned": {"Burberry": {"Day": {"nurses": [1.3, 0.4], "oneone": [2.8, 2.7], "support": [0.6, 0.3]}, "Night": {"nurses": [0.4, 0.2], "oneone": [3.3, 2.5]}}, "Central": {"Night": {"nightmgr": [1.0, 1.0]}}, "Mulberry": {"Day": {"nurses": [2.0, 1.3], "oneone": [2.7, 2.5], "support": [0.1, 0.1]}, "Night": {"nurses": [2.0, 1.3], "oneone": [1.7, 1.3], "support": [1.0, 1.0]}}, "Oakley": {"Day": {"oneone": [0.6, 0.2], "support": [0.3, 0.3]}, "Night": {"nurses": [0.2, 0.2], "oneone": [0.7, 0.7], "support": [0.4, 0.4]}}}, "Oct": {"Burberry": {"Day": {"nurses": [0.9, 0.6], "oneone": [3.2, 2.9], "support": [1.2, 1.1]}, "Night": {"nurses": [0.4, 0.4], "oneone": [2.7, 2.1], "support": [1.0, 1.0]}}, "Central": {"Day": {"nurses": [0.0, 0.0], "oneone": [0.1, 0.1], "support": [0.4, 0.4]}, "Night": {"nightmgr": [1.1, 1.0], "support": [0.1, 0.1]}}, "Mulberry": {"Day": {"nurses": [2.1, 1.4], "oneone": [2.5, 2.3], "support": [1.1, 1.0]}, "Night": {"nurses": [2.0, 1.4], "oneone": [2.5, 1.8], "support": [1.3, 1.3]}}, "Oakley": {"Day": {"oneone": [0.5, 0.0]}}}};
+const DAYS=[];for(let d=new Date(Date.UTC(2026,9,1));d<=new Date(Date.UTC(2026,10,30));d.setUTCDate(d.getUTCDate()+1))DAYS.push(d.toISOString().slice(0,10));
+const fmt=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+const QS=[
+['oakley','Has Oakley reopened? If yes, from what date and for how many patients?','Sona shows Oakley staffed from <b>13 November</b> (40 shifts so far), after being closed.'],
+['oneward','Could all patients be cared for on one ward? If not, what stops it?','Running two or three wards means separate nurse and support cover on each.'],
+['mulberry','Why does Mulberry need 2 nurses on every shift?','Mulberry\'s rota asks for <b>2 nurses every shift</b>; Burberry has less than 1 on average.'],
+['decide11','Who decides each day how many 1:1 staff go on the rota, and what do they base it on?','1:1 numbers on the rota ranged from <b>2 to 8</b> on a day shift in October.'],
+['reduce','When a patient\'s observation level is reduced, is the rota changed the same day?','1:1 stays at about <b>4.5 staff per shift</b> every week, including planned weeks.'],
+['basecover','Are some 1:1 shifts used for general ward cover – escorts, short staffing, general observations? Roughly how many per shift?','Ordinary support worker shifts are low – about <b>1 per ward per shift</b>.'],
+['nights','Do patients need 1:1 at night as well as in the day? Is night 1:1 funded?','Sona had about <b>4 staff on 1:1 every night</b> in October.'],
+['unfunded','Is any 1:1 that patients need not funded? Has more funding been asked for?','Needed 1:1 that isn\'t funded is a conversation with the commissioner – not a cut.'],
+['invoiced','Was all funded 1:1 invoiced for October and November?','September 1:1 fees billed were <b>£20,837</b>, about 1,090 hours.'],
+['offrota','Are any nurses or ward managers working on the wards who are not on the Sona rota?','Salaried staff don\'t appear on Sona shifts, so nurse cover may look lower than it is.'],
+['nightmgr','Who has been in charge of the hospital at night?','Sona shows a night manager on <b>30 of 31</b> October nights, but only about <b>5 of 14</b> nights from 9 to 22 November.'],
+['nightcount','Is the night manager counted as one of the ward nurses?','',],
+['overtime','Who approves overtime, and why was it needed?','<b>71</b> overtime shifts were on the October rota.'],
+['other','Is there anything else we should know about staffing at Baldock?','']];
+const DOCS=['Bed state / handover sheets','Observation level records','MDT or ward round decisions about 1:1','Commissioner funding letters or contracts','1:1 invoices','Safe staffing policy','Duty rota for nurses / managers not on Sona','Incident or seclusion log (numbers only)'];
+let S={you:{},census:{days:{},usual:{}},patients:[],need:{wards:{}},basis:{},q:{},docs:{list:{}},status:'draft'};
+let sb=null,sv=null,me=null,timer=null,ready=false,OTH=[],ROLE=null;
+const $=s=>document.querySelector(s);
+const get=(o,k)=>k.split('.').reduce((a,b)=>a&&a[b],o);
+const set=(o,k,v)=>{const p=k.split('.');let a=o;for(let i=0;i<p.length-1;i++)a=a[p[i]]=a[p[i]]||{};a[p[p.length-1]]=v};
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function saveSoon(){$('#save').textContent='Saving…';clearTimeout(timer);timer=setTimeout(save,1200);progress()}
+async function save(){if(!sv||!me){return}
+try{S.updated=new Date().toISOString();
+const {error}=await sv.from('answer').upsert({user_id:me.id,survey:SURVEY,email:(me.email||'').toLowerCase(),data:JSON.parse(JSON.stringify(S)),status:S.status==='submitted'?'submitted':'draft',updated_at:S.updated},{onConflict:'user_id,survey'});
+if(error)throw error;$('#save').textContent='Saved ✓';$('#nodb').hidden=true}
+catch(e){$('#save').textContent='Not saved – check your connection. Your answers stay on this screen.';$('#nodb').hidden=false}}
+/* steps nav */
+const sections=[...document.querySelectorAll('section.step')];
+$('#steps').innerHTML=sections.map((s,i)=>`<button type="button" data-go="${s.id}">${i+1}. ${s.dataset.title}</button>`).join('');
+$('#steps').addEventListener('click',e=>{const b=e.target.closest('button');if(b)document.getElementById(b.dataset.go).scrollIntoView({behavior:'smooth'})});
+const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)for(const b of $('#steps').children)b.setAttribute('aria-current',b.dataset.go===e.target.id)},{rootMargin:'-40% 0px -55% 0px'});
+sections.forEach(s=>io.observe(s));
+/* generic bindings */
+function bindAll(root=document){
+root.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;
+if(el.classList.contains('choices')&&el.dataset.multi){const cur=()=>get(S,k)||[];el.innerHTML=el.dataset.opts.split('|').map(o=>`<button type="button" aria-pressed="${cur().includes(o)}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;let a=[...cur()];a=a.includes(v)?a.filter(x=>x!==v):[...a,v];set(S,k,a);b.setAttribute('aria-pressed',a.includes(v));saveSoon()};}
+else if(el.classList.contains('choices')){el.innerHTML=el.dataset.opts.split('|').map(o=>`<button type="button" aria-pressed="${get(S,k)===o}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;set(S,k,get(S,k)===v?'':v);el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===get(S,k)));saveSoon()};}
+else if(el.type==='checkbox'){el.checked=!!get(S,k);el.onchange=()=>{set(S,k,el.checked);saveSoon()}}
+else{el.value=get(S,k)??'';el.oninput=()=>{set(S,k,el.type==='number'?(el.value===''?'':+el.value):el.value);saveSoon()}}});}
+/* other contributors' answers (read-only) */
+const when=t=>t?new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+const whoOf=o=>esc((o.data?.you?.name||o.email||'Someone')+(o.data?.you?.role?', '+o.data.you.role:''));
+function othersHtml(fn,title='What others have said'){
+const li=OTH.map(o=>{let v='';try{v=fn(o.data||{})}catch(e){}return v?`<li><b>${whoOf(o)}</b> <span class="muted small">${when(o.updated_at)}</span>: ${esc(v)}</li>`:''}).filter(Boolean);
+return li.length?`<div class="others"><div class="small muted">${title}</div><ul>${li.join('')}</ul></div>`:''}
+function latestOther(day,w){let best=null;for(const o of OTH){const v=o.data?.census?.days?.[day]?.[w];if(v!==undefined&&v!==''&&(!best||o.updated_at>best.t))best={v,t:o.updated_at,who:o.data?.you?.name||o.email}}return best}
+function latestUsual(k){let best=null;for(const o of OTH){const v=o.data?.census?.usual?.[k];if(v!==undefined&&v!==''&&(!best||o.updated_at>best.t))best={v,t:o.updated_at,who:o.data?.you?.name||o.email}}return best}
+const joinA=a=>(a||[]).join(', ');
+/* census */
+function renderCensus(){
+$('#usual').innerHTML=['Oct','Nov'].map(m=>WARDS.map(w=>`<div><label class="f" for="u-${m}-${w}">${w}, ${m==='Oct'?'October':'November'}</label><input type="number" min="0" max="40" inputmode="numeric" id="u-${m}-${w}" data-k="census.usual.${m}${w}"></div>`).join('')).join('');
+const weeks={};DAYS.forEach(d=>{const t=new Date(d+'T12:00:00Z');const mon=new Date(t);mon.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));(weeks[mon.toISOString().slice(0,10)]??=[]).push(d)});
+$('#weeks').innerHTML=Object.entries(weeks).map(([wk,ds])=>`<details class="week"><summary>Week from ${fmt(wk)} <span class="pill" data-wk="${wk}"></span></summary><div class="in"><table class="days"><thead><tr><th>Day</th>${WARDS.map(w=>`<th>${w}</th>`).join('')}<th></th></tr></thead><tbody>${ds.map(d=>`<tr><td class="d">${fmt(d)}</td>${WARDS.map(w=>`<td><input type="number" min="0" max="40" inputmode="numeric" aria-label="${w} ${fmt(d)}" data-day="${d}" data-w="${w}"></td>`).join('')}<td><button class="btn ghost small" type="button" data-copy="${d}" title="Same as the day before">Same as day before</button></td></tr>`).join('')}</tbody></table></div></details>`).join('');
+fillDayInputs();}
+function fillDayInputs(){document.querySelectorAll('[data-day]').forEach(i=>{const v=S.census.days[i.dataset.day]?.[i.dataset.w];i.value=v??'';const o=latestOther(i.dataset.day,i.dataset.w);i.placeholder=o?String(o.v):'';i.title=o?`${o.who} entered ${o.v}`:''});
+document.querySelectorAll('#usual input').forEach(i=>{const o=latestUsual(i.id.replace(/^u-/,'').replace('-',''));i.placeholder=o?String(o.v):'';i.title=o?`${o.who} entered ${o.v}`:''});weekPills()}
+function weekPills(){document.querySelectorAll('[data-wk]').forEach(p=>{const tb=p.closest('details').querySelectorAll('[data-day]');const n=[...tb].filter(i=>i.value!=='').length;p.textContent=n===tb.length?'done':`${n}/${tb.length} filled`})}
+$('#weeks').addEventListener('input',e=>{const i=e.target;if(!i.dataset.day)return;(S.census.days[i.dataset.day]??={})[i.dataset.w]=i.value===''?'':+i.value;weekPills();saveSoon()});
+$('#weeks').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;const d=b.dataset.copy,ix=DAYS.indexOf(d);if(ix<1)return;const prev=S.census.days[DAYS[ix-1]]||{};S.census.days[d]={...prev};fillDayInputs();saveSoon()});
+$('#fillUsual').addEventListener('click',()=>{DAYS.forEach(d=>{const m=d.slice(5,7)==='10'?'Oct':'Nov';const cur=S.census.days[d]??={};WARDS.forEach(w=>{const u=S.census.usual[m+w];if((cur[w]===undefined||cur[w]==='')&&u!==undefined&&u!=='')cur[w]=u})});fillDayInputs();saveSoon()});
+/* patients */
+const PT_LEVEL='1:1 within eyesight|1:1 arm\'s length|2:1|3:1';
+const PT_REASON='Risk to self|Risk to others|Absconsion risk|Physical health|Treatment / presentation management|Seclusion / segregation|Other';
+const HRS='None|Part of the shift|Whole shift';
+function renderPatients(){
+const op=[];for(const o of OTH)for(const p of (o.data?.patients||[]))if(p&&p.ref)op.push({o,p});
+$('#othersPts').innerHTML=op.length?`<div class="others"><div class="small muted">Patients others have already added – if you know more about one, add your own card with the same ref</div><ul>${op.map(({o,p})=>`<li><b>${esc(p.ref)}</b> (${esc(p.ward||'ward?')}) ${esc(p.level||'')}${p.reason?' – '+esc(p.reason):''}; days: ${esc(p.day||'?')}, nights: ${esc(p.night||'?')}; funded: ${esc(p.funded||'?')} <span class="muted small">– ${whoOf(o)}</span></li>`).join('')}</ul></div>`:'';
+$('#patients').innerHTML=S.patients.map((p,i)=>`<div class="card" data-pt="${i}">
+<div class="row" style="margin-top:0;justify-content:space-between"><h3 style="margin:0">Patient ${i+1}</h3><button class="btn ghost small" type="button" data-del="${i}">Remove</button></div>
+<div class="grid2"><div><label class="f">Initials or ref (no names)</label><input type="text" data-k="patients.${i}.ref"></div>
+<div><label class="f">Ward</label><div class="choices" data-k="patients.${i}.ward" data-opts="${WARDS.join('|')}"></div></div></div>
+<label class="f">Observation level</label><div class="choices" data-k="patients.${i}.level" data-opts="${PT_LEVEL}"></div>
+<label class="f">Main reason</label><div class="choices" data-k="patients.${i}.reason" data-opts="${PT_REASON}"></div>
+<label class="f">Who decided it?</label><div class="choices" data-k="patients.${i}.by" data-opts="MDT / RC|Nurse in charge|Commissioner|Not sure"></div>
+<div class="grid2"><div><label class="f">From</label><input type="date" min="2026-01-01" max="2026-12-31" data-k="patients.${i}.from"></div><div><label class="f">Until (leave blank if still on it)</label><input type="date" min="2026-01-01" max="2026-12-31" data-k="patients.${i}.to"></div></div>
+<label class="f">Needed on DAY shifts</label><div class="choices" data-k="patients.${i}.day" data-opts="${HRS}"></div>
+<label class="f">Needed on NIGHT shifts</label><div class="choices" data-k="patients.${i}.night" data-opts="${HRS}"></div>
+<label class="f">If part of a shift, roughly how many hours a day?</label><input type="text" data-k="patients.${i}.partHrs" placeholder="e.g. 6 hours, mornings only">
+<label class="f">Other staff time this patient's treatment needs</label><div class="choices" data-k="patients.${i}.extra" data-multi="1" data-opts="Escorts / section 17 leave|Two-person care or restraint risk|Therapy sessions on the ward|Physical health care|None"></div>
+<label class="f">Roughly how many extra staff hours a week for that?</label><input type="text" data-k="patients.${i}.extraHrs" placeholder="e.g. 2 escorts a week, 3 hours each">
+<label class="f">Where is this need written down?</label><div class="choices" data-k="patients.${i}.where" data-multi="1" data-opts="Care plan|MDT / ward round notes|Observation record|Commissioner letter|Not written down"></div>
+<label class="f">Is it funded by the commissioner?</label><div class="choices" data-k="patients.${i}.funded" data-opts="Yes – all of it|Partly|No|Asked for, waiting|Not sure"></div>
+<label class="f">If partly, what is funded?</label><input type="text" data-k="patients.${i}.fundedWhat" placeholder="e.g. days only, 8 hours a day">
+<label class="f">Who pays? (commissioner)</label><input type="text" data-k="patients.${i}.commissioner">
+<label class="f">Anything else</label><textarea data-k="patients.${i}.note"></textarea></div>`).join('');
+bindAll($('#patients'));}
+$('#addPt').addEventListener('click',()=>{S.patients.push({});renderPatients();saveSoon();document.querySelector(`[data-pt="${S.patients.length-1}"]`).scrollIntoView({behavior:'smooth',block:'start'})});
+$('#patients').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;const i=+b.dataset.del;if(b.dataset.sure){S.patients.splice(i,1);renderPatients();saveSoon()}else{b.dataset.sure='1';b.textContent='Tap again to remove'}});
+/* how the rota is set */
+function stepper(k,label){return `<div><label class="f">${label}</label><div class="stepper" data-step="${k}"><button type="button" data-d="-1" aria-label="less">−</button><output>${get(S,k)??'?'}</output><button type="button" data-d="1" aria-label="more">+</button></div></div>`}
+function tplTable(w){
+const per=['Day','Night'],roles=[['nurses','Nurses'],['support','Support workers'],['oneone','1:1 staff']];
+const cell=(m,p,r)=>{const v=TPL[m]?.[w]?.[p]?.[r];return v?`${v[0]} <span class="muted">/ ${v[1]}</span>`:'<span class="muted">0</span>'};
+return `<div style="overflow-x:auto"><table class="days"><thead><tr><th>Average per shift<br><span class="muted">proposed / filled</span></th><th>Oct day</th><th>Oct night</th><th>Nov day</th><th>Nov night</th></tr></thead><tbody>${roles.map(([r,l])=>`<tr><td class="d">${l}</td>${['Oct','Nov'].map(m=>per.map(p=>`<td>${cell(m,p,r)}</td>`).join('')).join('')}</tr>`).join('')}</tbody></table></div><p class="small muted" style="margin:6px 0 0">From Sona. November is 1–20 November, worked shifts.</p>`}
+function renderNeed(){
+$('#needWards').innerHTML=WARDS.map(w=>`<div class="card"><h3 style="margin-top:0">${w}</h3>
+${tplTable(w)}
+${othersHtml(d=>{const n=d.need?.wards?.[w];if(!n)return '';const p=[];if(n.open)p.push(n.open);if(n.tplRight)p.push('Sona rota: '+n.tplRight);if(n.offSona?.length)p.push('not on Sona: '+joinA(n.offSona)+(n.offSonaWho?' ('+n.offSonaWho+')':''));if(['dayRmn','daySup','nightRmn','nightSup'].some(k=>n[k]!==undefined))p.push(`needs day ${n.dayRmn??'?'} nurses + ${n.daySup??'?'} support, night ${n.nightRmn??'?'} + ${n.nightSup??'?'}`+(n.forPts?` for ${n.forPts} patients`:''));if(n.how)p.push('worked out by: '+n.how);return p.join('; ')})}
+<label class="f">Is this ward</label><div class="choices" data-k="need.wards.${w}.open" data-opts="Open|Closed|Open part of the time"></div>
+<label class="f">Is the “proposed” rota above what you plan to run on this ward?</label><div class="choices" data-k="need.wards.${w}.tplRight" data-opts="Yes, that's right|No – too high|No – too low|Not sure"></div>
+<label class="f">Does anyone work on this ward who is NOT on the Sona rota?</label><div class="choices" data-k="need.wards.${w}.offSona" data-multi="1" data-opts="No|Salaried nurses or managers|Agency booked outside Sona|Bank staff by phone|Staff from another ward|Not sure"></div>
+<label class="f">Who, and roughly how many shifts a week?</label><input type="text" data-k="need.wards.${w}.offSonaWho">
+<h3>What you think this ward really needs on a normal shift (not counting 1:1)</h3>
+<div class="grid4">${stepper(`need.wards.${w}.dayRmn`,'Day nurses')}${stepper(`need.wards.${w}.daySup`,'Day support')}${stepper(`need.wards.${w}.nightRmn`,'Night nurses')}${stepper(`need.wards.${w}.nightSup`,'Night support')}</div>
+<label class="f">For how many patients is that?</label><input type="number" min="0" max="40" inputmode="numeric" data-k="need.wards.${w}.forPts">
+<label class="f">How did you work this out?</label><input type="text" data-k="need.wards.${w}.how" placeholder="e.g. policy minimum, acuity score, RC asked for it, experience"></div>`).join('')+
+`<div class="card"><h3 style="margin-top:0">Night service manager (whole hospital)</h3><div class="sona">Sona: on <b>30 of 31</b> October nights; about <b>5 of 14</b> nights 9–22 November.</div>
+${othersHtml(d=>d.need?.nightmgr||'')}<label class="f">Is a night manager needed every night?</label><div class="choices" data-k="need.nightmgr" data-opts="Yes, every night|Some nights|No – the ward nurse in charge covers|Not sure"></div></div>`;
+bindAll($('#needWards'));}
+$('#needWards').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const st=b.closest('[data-step]');const k=st.dataset.step;let v=get(S,k);v=Math.max(0,(v===undefined||v===''?0:+v)+(+b.dataset.d));set(S,k,v);st.querySelector('output').textContent=v;saveSoon()});
+/* questions */
+function renderQs(){
+$('#qs').innerHTML=QS.map(([id,q,sona],i)=>`<div class="card"><h3 style="margin-top:0">${i+1}. ${q}</h3>${sona?`<div class="sona">What Sona shows: ${sona}</div>`:''}
+${othersHtml(d=>{const a=d.q?.[id];if(!a||(!a.a&&!a.more&&!a.evidence))return '';return [a.a,a.more,a.evidence?'('+a.evidence+')':''].filter(Boolean).join(' – ')})}
+<div class="choices" data-k="q.${id}.a" data-opts="Yes|No|Partly|Not sure"></div>
+<label class="f">Tell us more (optional)</label><textarea data-k="q.${id}.more"></textarea>
+<label class="f">Something that shows this, or who else would know (optional)</label><input type="text" data-k="q.${id}.evidence" placeholder="e.g. obs policy, ask the RC, night duty rota"></div>`).join('');
+bindAll($('#qs'));}
+function renderDocs(){$('#docs').innerHTML=DOCS.map((d,i)=>`<li><label><input type="checkbox" data-k="docs.list.d${i}"> ${d}</label></li>`).join('');bindAll($('#docs'))}
+/* progress */
+function progress(){
+const filled=DAYS.filter(d=>WARDS.every(w=>{const v=S.census.days[d]?.[w];return v!==undefined&&v!==''})).length;
+const qa=QS.filter(([id])=>S.q[id]?.a).length;
+const wardsDone=WARDS.filter(w=>S.need.wards[w]?.open).length+(S.basis?.methods?.length?0:0);
+$('#summary').textContent=`Patients: ${filled} of ${DAYS.length} days filled. 1:1 patients added: ${S.patients.length}. Rota: ${wardsDone} of 3 wards, basis ${S.basis?.methods?.length?'given':'not yet given'}. Questions answered: ${qa} of ${QS.length}.`;
+const b=$('#steps').children;b[0].classList.toggle('done',!!S.you.name);b[1].classList.toggle('done',filled===DAYS.length);b[2].classList.toggle('done',S.patients.length>0);b[3].classList.toggle('done',wardsDone===3);b[4].classList.toggle('done',qa===QS.length);b[5].classList.toggle('done',S.status==='submitted');
+$('#done').hidden=S.status!=='submitted';}
+function text(){const L=[];L.push('BALDOCK STAFFING ANSWERS',`From: ${S.you.name||''} (${S.you.role||''})`,'');
+L.push('PATIENTS PER DAY (Burberry / Mulberry / Oakley)');DAYS.forEach(d=>{const x=S.census.days[d]||{};if(WARDS.some(w=>x[w]!==undefined&&x[w]!==''))L.push(`${d}: ${WARDS.map(w=>x[w]??'').join(' / ')}`)});
+L.push('','1:1 PATIENTS');S.patients.forEach((p,i)=>L.push(`${i+1}. ${['ref','ward','level','reason','by','from','to','day','night','partHrs','extra','extraHrs','where','funded','fundedWhat','commissioner','note'].map(k=>`${k}: ${p[k]??''}`).join('; ')}`));
+L.push('','STAFF NEEDED');WARDS.forEach(w=>{const n=S.need.wards[w]||{};L.push(`${w}: ${n.open||''}; day ${n.dayRmn??''} RMN + ${n.daySup??''} support; night ${n.nightRmn??''} RMN + ${n.nightSup??''} support; for ${n.forPts??''} patients`)});
+WARDS.forEach(w=>{const n=S.need.wards[w]||{};L.push(`  ${w} rota right? ${n.tplRight||''}; off-Sona: ${(n.offSona||[]).join(', ')} ${n.offSonaWho||''}; worked out by: ${n.how||''}`)});
+L.push(`Night manager needed: ${S.need.nightmgr||''}`,`Rota based on: ${(S.basis?.methods||[]).join(', ')}`,`Set by / reviewed: ${S.basis?.who||''}`,`Written in: ${S.basis?.doc||''}`,`How rota changes: ${S.basis?.change||''}`,`What changes with more patients: ${S.need.more||''}`,'','QUESTIONS');
+QS.forEach(([id,q],i)=>{const a=S.q[id]||{};L.push(`${i+1}. ${q}`,`   ${a.a||''} – ${a.more||''} ${a.evidence?'[evidence: '+a.evidence+']':''}`)});
+L.push('','CAN SEND: '+DOCS.filter((d,i)=>S.docs.list['d'+i]).join(', '),'OTHER: '+(S.docs.other||''));return L.join('\n')}
+$('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(text());$('#copy').textContent='Copied ✓'}catch(e){$('#copy').textContent='Copy failed – select the text instead'}});
+$('#submit').addEventListener('click',async()=>{S.status='submitted';S.submittedAt=new Date().toISOString();await save();progress()});
+function renderOthersBasis(){$('#othersBasis').innerHTML=othersHtml(d=>{const b=d.basis||{};const p=[];if(b.methods?.length)p.push(joinA(b.methods));if(b.who)p.push('set by: '+b.who);if(b.doc)p.push('written in: '+b.doc);if(b.change)p.push('changes: '+b.change);if(d.need?.more)p.push('more patients: '+d.need.more);return p.join('; ')})}
+function renderAll(){renderOthersBasis();bindAll(document.querySelector('#s-you'));bindAll(document.querySelector('#s-census .card:last-child'));bindAll(document.querySelector('#s-oneone .card:last-child'));bindAll(document.querySelector('#s-need > .card:last-child'));bindAll(document.querySelector('#s-end'));renderCensus();bindAll($('#usual'));renderPatients();renderNeed();renderQs();renderDocs();progress()}
+renderAll();
+(async()=>{
+const gate=(msg,showBtn=true)=>{$('#gate').hidden=false;$('#app').hidden=true;$('#gateMsg').innerHTML=msg;$('#signIn').hidden=!showBtn};
+if(!window.supabase){gate('This page could not load its sign-in library. Check your internet connection and refresh.',false);return}
+sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'pkce',storageKey:'nouvita-survey-auth'}}); // own sign-in, never shared with the HR page
+sv=sb.schema('nouvita_survey');
+$('#signIn').onclick=async()=>{const {error}=await sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo:location.origin+location.pathname}});if(error){$('#gateErr').textContent=error.message;$('#gateErr').hidden=false}};
+$('#signOut').onclick=async()=>{await sb.auth.signOut();location.replace(location.pathname)};
+const {data:{session}}=await sb.auth.getSession();
+if(!session){gate('Sign in with your Nouvita Microsoft account to answer. You can stop at any time – your answers are saved and you can come back later.');return}
+me=session.user;
+const {data:role,error:rErr}=await sv.rpc('my_access');
+if(rErr){gate(/schema must be one of|Invalid schema/i.test(rErr.message)?'Not set up yet: the questionnaire area is not switched on. Please tell the finance team.':esc(rErr.message),false);return}
+if(!role){gate(`Signed in as <b>${esc(me.email)}</b>, but this account is not on the list for this questionnaire. Please ask the finance team to add you.`,false);
+const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=$('#signOut').onclick;$('#gate').appendChild(b);return}
+$('#gate').hidden=true;$('#app').hidden=false;ROLE=role;
+$('#whoami').textContent=me.email+' · '+({admin:'admin',inviter:'can invite',contributor:'contributor'}[role]||role);
+async function loadOthers(){const {data:all,error}=await sv.from('answer').select('user_id,email,status,updated_at,data').eq('survey',SURVEY);
+if(error)return null;OTH=(all||[]).filter(r=>r.user_id!==me.id);return all}
+$('#refresh').onclick=async()=>{const all=await loadOthers();if(all){renderAll();if(ROLE!=='contributor')peoplePanel(all)}};
+async function peoplePanel(all){
+$('#revCount').textContent=all?`${all.length} ${all.length===1?'person has':'people have'} started; ${all.filter(r=>r.status==='submitted').length} finished.`:'';
+const {data:inv,error}=await sv.from('invite').select('email,role,name,granted_by').eq('survey',SURVEY).order('created_at');
+if(error){$('#invList').innerHTML=`<li>${esc(error.message)}</li>`;return}
+const st=e=>{const r=(all||[]).find(x=>x.email===e);return r?(r.status==='submitted'?'finished':'started'):'not started yet'};
+$('#invList').innerHTML=(inv||[]).map(i=>`<li><span><b>${esc(i.name||i.email)}</b> <span class="muted small">${esc(i.email)} · ${esc(i.role)} · ${st(i.email)}</span></span>${(ROLE==='admin'&&i.role!=='admin')||(i.role==='contributor'&&i.granted_by===me.email.toLowerCase())?`<button class="btn ghost small" type="button" data-rm="${esc(i.email)}">Remove</button>`:''}</li>`).join('');
+}
+const all0=await loadOthers();
+if(role==='admin'||role==='inviter'){
+$('#reviewer').hidden=false;await peoplePanel(all0);
+if(role==='admin'){$('#invRoleBox').hidden=false;$('#invRole').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('#invRole').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
+$('#invAdd').onclick=async()=>{const e=$('#invEmail').value.trim().toLowerCase();const n=$('#invName').value.trim();
+if(!/^[^@\s]+@nouvita\.co\.uk$/.test(e)){$('#invMsg').textContent='Use a Nouvita email address (…@nouvita.co.uk).';return}
+const rl=ROLE==='admin'?($('#invRole [aria-pressed=true]')?.dataset.v||'inviter'):'contributor';
+const {error}=await sv.from('invite').insert({email:e,role:rl,name:n||null,survey:SURVEY,granted_by:me.email.toLowerCase()});
+$('#invMsg').textContent=error?(/duplicate|unique/i.test(error.message)?'That person is already on the list.':'Could not invite: '+error.message):`${e} can now sign in. Copy the link and send it to them.`;
+if(!error){$('#invEmail').value='';$('#invName').value='';peoplePanel(await loadOthers())}};
+$('#invList').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to remove';return}
+const {error}=await sv.from('invite').delete().eq('email',b.dataset.rm);$('#invMsg').textContent=error?'Could not remove: '+error.message:'Removed. Their answers so far are kept.';peoplePanel(await loadOthers())};
+$('#copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+location.pathname);$('#copyLink').textContent='Link copied ✓'}catch(e){$('#invMsg').textContent='Link: '+location.origin+location.pathname}};
+$('#dlAll').onclick=async()=>{const {data:all}=await sv.from('answer').select('user_id,email,status,updated_at,data').eq('survey',SURVEY);const blob=new Blob([JSON.stringify((all||[]).map(r=>({id:r.email,status:r.status,updated:r.updated_at,data:r.data})),null,1)],{type:'application/json'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`baldock-answers-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove()};
+}
+const {data:row,error:lErr}=await sv.from('answer').select('data,status').eq('survey',SURVEY).eq('user_id',me.id).maybeSingle();
+if(lErr){$('#nodb').hidden=false}
+const data=row&&row.data;
+if(data&&typeof data==='object'&&data.census){S=Object.assign(S,data);S.census.days??={};S.census.usual??={};S.need.wards??={};S.q??={};S.basis??={};S.docs??={list:{}};S.docs.list??={}}
+renderAll();
+if(!S.you.name&&me.user_metadata?.full_name){S.you.name=me.user_metadata.full_name;$('#you-name').value=S.you.name}
+$('#save').textContent=data?'Your earlier answers are loaded.':'Answers save automatically.';ready=true;
+})();
+}
+</script>
+</body>
+</html>
