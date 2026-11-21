@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Care homes staffing questions</title>
+<!--
+Care homes staffing questionnaire -- 211126v1. Hosted on nouvita-group GitHub Pages at hr-review/care-homes-staffing/
+with its OWN sign-in session and its OWN access list (nouvita_survey.ch_invite); it grants no HR access.
+Holds NO personal data: answers are saved to Supabase project tdhggqurzrmlchzthkrw (nouvita_survey.ch_answer) after
+Microsoft Entra sign-in. RLS: each person sees only the homes on their invite; edits only their own answers.
+Uses the PUBLISHABLE (anon) key only. Setup: nouvita_survey_carehomes_211126v1.sql.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, plain, kind – a home manager's form filled in between tasks, never a test.
+IDEA: the paper handover sheet – one clear column, ruled sections, tick boxes.
+PICTURE: the form itself, with the home picker and a progress strip of six sections.
+COLOUR and TYPE: white ground, deep ink, one clinical teal for actions; Figtree throughout.
+LAYOUT: single 760px column, sticky strip, big tap targets, stacks on phones. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1a1f);--panel:light-dark(#f3f7f8,#16252c);--ink:light-dark(#10232c,#e7f0f2);--muted:light-dark(#4f6670,#9db3bb);--line:light-dark(#d5e1e5,#2a3d45);--acc:light-dark(#00756d,#3cc3b6);--accInk:light-dark(#ffffff,#06201d);--warn:light-dark(#a44200,#ffb27a);--ok:light-dark(#1d7a3a,#7fd69a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Figtree,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:760px;margin:0 auto;padding:0 max(4vw,16px) 80px}
+header.top{padding:24px 0 8px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.08;margin:0 0 10px;font-weight:800;text-wrap:balance}
+h2{font-size:24px;line-height:1.15;margin:0 0 6px;font-weight:800}
+h3{font-size:18px;margin:18px 0 6px;font-weight:600}
+p{margin:0 0 12px}.muted{color:var(--muted)}.small{font-size:14px}
+.strip{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+.steps{display:flex;gap:6px;overflow-x:auto}
+.steps button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 14px;font:600 15px Figtree,sans-serif;min-height:44px;cursor:pointer}
+.steps button[aria-current=true]{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.steps button.done::after{content:" ✓"}
+.save{font-size:14px;color:var(--muted);margin-top:6px;min-height:20px}
+section.step{padding-top:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+label.f{display:block;font-weight:600;margin:12px 0 6px}
+input[type=text],input[type=number],input[type=date],textarea,select{width:100%;font:16px Figtree,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+textarea{min-height:84px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.choices{display:flex;flex-wrap:wrap;gap:8px}
+.choices button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 14px;font:600 16px Figtree,sans-serif;min-height:44px;cursor:pointer}
+.choices button[aria-pressed=true]{background:var(--acc);color:var(--accInk);border-color:var(--acc)}
+.btn{border:0;background:var(--acc);color:var(--accInk);border-radius:12px;padding:12px 18px;font:700 16px Figtree,sans-serif;min-height:48px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.btn.small{padding:8px 12px;min-height:40px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.sona{border-left:4px solid var(--acc);padding:8px 12px;margin:8px 0 10px;background:var(--bg);border-radius:0 8px 8px 0;font-size:15px}
+.sona b{color:var(--acc)}
+table.days{width:100%;border-collapse:collapse;font-size:15px}
+table.days th{text-align:left;font-weight:600;color:var(--muted);padding:6px 4px;font-size:13px}
+table.days td{padding:4px;white-space:nowrap}
+table.days input{min-height:40px;text-align:center;padding:6px;max-width:110px}
+table.days td.d{font-weight:600}
+table.days input::placeholder{color:var(--muted);opacity:.8}
+details.week{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:var(--bg)}
+details.week summary{cursor:pointer;padding:12px 14px;font-weight:600;min-height:44px}
+details.week .in{padding:0 10px 12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:600px){.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:minmax(0,1fr)}body{font-size:16px}}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 20px Figtree,sans-serif;cursor:pointer}
+.stepper output{min-width:2ch;text-align:center;font-weight:800;font-size:20px}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:13px}
+.banner{border:1px solid var(--warn);color:var(--warn);border-radius:12px;padding:12px 14px;margin:12px 0}
+.okmsg{border:1px solid var(--ok);color:var(--ok);border-radius:12px;padding:12px 14px;margin:12px 0}
+ul.check{list-style:none;padding:0;margin:0}ul.check li{margin:6px 0}
+ul.check label{display:flex;gap:10px;align-items:flex-start;min-height:44px;cursor:pointer}
+ul.check input{width:22px;height:22px;margin-top:3px;flex:none}
+.gate{max-width:460px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:center}
+.gate h1{font-size:26px}.who{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:10px}
+.linkbtn{border:0;background:none;color:var(--acc);font:600 14px Figtree,sans-serif;cursor:pointer;min-height:44px;padding:0 6px}
+[hidden]{display:none!important}
+.others{border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin:8px 0 10px;font-size:15px}
+.others ul{margin:4px 0 0;padding-left:18px}.others li{margin:3px 0}
+.plist{list-style:none;padding:0;margin:8px 0 0}.plist li{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:8px 0}
+.homebar{background:var(--acc);color:var(--accInk);border-radius:14px;padding:14px 16px;margin-top:14px}
+.homebar select{background:var(--bg);color:var(--ink);font-weight:700;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+<h1>Care homes staffing questions</h1>
+<p id="gateMsg">Sign in with your Nouvita Microsoft account to answer.</p>
+<button class="btn" id="signIn" type="button">Sign in with Microsoft</button>
+<p id="gateErr" class="banner" hidden></p>
+</div>
+<div id="app" hidden>
+<div class="strip"><div class="wrap" style="padding-bottom:0">
+<nav class="steps" id="steps" aria-label="Sections"></nav>
+<div class="save" id="save" aria-live="polite"></div>
+</div></div>
+<main class="wrap">
+<div class="who"><span id="whoami"></span><button class="linkbtn" id="refresh" type="button">Refresh others' answers</button><button class="linkbtn" id="signOut" type="button">Sign out</button></div>
+<div class="homebar"><label for="homeSel"><b>Which home are you answering for?</b></label><select id="homeSel"></select><div class="small" id="homeNote" style="margin-top:6px"></div></div>
+<div class="card" id="reviewer" hidden>
+<h3 style="margin-top:0">People helping with this questionnaire</h3>
+<p class="small muted">Invite home managers and anyone who knows a home well. They sign in with their Nouvita Microsoft account, see only the homes you tick, and can change only their own answers.</p>
+<div class="grid2"><div><label class="f" for="invEmail">Their Nouvita email</label><input type="text" id="invEmail" placeholder="firstname.lastname@nouvita.co.uk" autocomplete="off"></div>
+<div><label class="f" for="invName">Name and role (optional)</label><input type="text" id="invName" placeholder="e.g. Sam Lee, manager at The Leys"></div></div>
+<div id="invRoleBox" hidden><label class="f">Invite them as</label><div class="choices" id="invRole"><button type="button" data-v="contributor" aria-pressed="true">Home contributor – answers for the homes ticked</button><button type="button" data-v="inviter" aria-pressed="false">Inviter – can invite others</button></div></div>
+<label class="f">Which homes can they see and answer for?</label><div class="choices" id="invHomes"></div>
+<div class="row"><button class="btn" id="invAdd" type="button">Invite</button><button class="btn ghost" id="copyLink" type="button">Copy the link to send them</button></div>
+<p id="invMsg" class="small" aria-live="polite"></p>
+<ul class="plist" id="invList"></ul>
+<p id="revCount" class="muted" style="margin-top:12px"></p>
+<div class="row"><button class="btn ghost" id="dlAll" type="button">Download all answers (for the workbooks)</button></div>
+</div>
+<header class="top" id="intro">
+<h1 id="title">Staffing at <span data-home></span>: what really happens</h1>
+<p>We are checking the Sona rota for October and November against what the home actually needs. Sona shows the shifts, but not how many residents were in, what support they need, or why the rota is set as it is. Only the people who run the home can tell us that.</p>
+<p><b>Several people may help for each home.</b> Under each question you'll see what others have already said. You can't change their answers – just add what you know.</p>
+<p class="muted">There are no right or wrong answers. If you don't know, tap <b>Not sure</b> and say who might. Your answers save as you go and you can come back on any device. Never write residents' names: use initials or a reference.</p>
+<div id="nodb" class="banner" hidden>Your answers can't be saved just now. Keep going – they stay on this screen – and use “Copy my answers” at the end to email them if saving doesn't come back.</div>
+</header>
+<section class="step" id="s-you" data-title="About you">
+<h2>1. About you</h2>
+<div class="card">
+<label class="f" for="you-name">Your name</label><input type="text" id="you-name" data-k="you.name" autocomplete="name">
+<label class="f" for="you-role">Your role</label><input type="text" id="you-role" data-k="you.role" placeholder="e.g. Home manager">
+<label class="f" for="you-help">Who else helped answer? (optional)</label><input type="text" id="you-help" data-k="you.helpers">
+</div>
+</section>
+<section class="step" id="s-census" data-title="Residents">
+<h2>2. How many residents were in each day?</h2>
+<p>Start with the usual number. Then open each week and change only the days that were different (admissions, discharges, hospital stays).</p>
+<div class="sona" id="censusFact"></div>
+<p class="small muted">Grey numbers in the boxes are what someone else has entered. Leave them if they're right, or type your own.</p>
+<div class="card" id="usualCard">
+<h3>Usual number of residents</h3>
+<div class="grid2"><div><label class="f" for="u-Oct">October</label><input type="number" min="0" max="60" inputmode="numeric" id="u-Oct" data-k="census.usual.Oct"></div><div><label class="f" for="u-Nov">November</label><input type="number" min="0" max="60" inputmode="numeric" id="u-Nov" data-k="census.usual.Nov"></div></div>
+<div class="row"><button class="btn" id="fillUsual" type="button">Fill empty days with these numbers</button></div>
+</div>
+<div id="weeks"></div>
+<div class="card">
+<label class="f">Where did these numbers come from?</label>
+<div class="choices" data-k="census.source" data-opts="Occupancy records|Handover sheets|Admissions log|My memory / estimate|Other"></div>
+<label class="f" for="census-note">Anything we should know (admissions, discharges, hospital stays, empty rooms)?</label>
+<textarea id="census-note" data-k="census.note"></textarea>
+<ul class="check"><li><label><input type="checkbox" data-k="census.canSend"> I can send occupancy records instead (remove names first)</label></li></ul>
+</div>
+</section>
+<section class="step" id="s-oneone" data-title="Extra support">
+<h2>3. Residents who need 1:1 or extra support</h2>
+<p>Add one card for each resident who needs 1:1 or more, or other staff time on top of the usual rota, in October or November. <b>If a resident needs it for their care, it counts as needed – whether it is funded or not.</b></p>
+<div class="sona" id="oneoneFact"></div>
+<div id="othersPts"></div>
+<div id="patients"></div>
+<div class="row"><button class="btn" id="addPt" type="button">+ Add a resident</button></div>
+<div class="card" style="margin-top:18px">
+<ul class="check"><li><label><input type="checkbox" data-k="oneone.canSend"> I can send care plans, support plans or funding letters instead (remove names first)</label></li></ul>
+</div>
+</section>
+<section class="step" id="s-need" data-title="How the rota is set">
+<h2>4. How the rota is set, and what you really staff with</h2>
+<p>Here is what the Sona rota <b>proposed</b> (all shifts on the rota, filled or not) and what was <b>actually filled</b>, as the average number of staff shifts each day and night. Tell us if it's right, what it's based on, and what the home really needs.</p>
+<div id="needCard"></div>
+<div class="card">
+<h3 style="margin-top:0">What is the rota based on? Tick all that apply.</h3>
+<div id="othersBasis"></div>
+<div class="choices" data-k="basis.methods" data-multi="1" data-opts="Registration or CQC conditions|Dependency or needs assessment|Commissioner contract or placement agreement|Number of residents|Residents' support plans|Previous rota carried forward|Head office instruction|Not sure"></div>
+<label class="f" for="b-who">Who sets the rota template in Sona, and when was it last reviewed?</label>
+<input type="text" id="b-who" data-k="basis.who" placeholder="e.g. Home manager, reviewed in the summer">
+<label class="f" for="b-doc">Is the basis written down? Give the name of the policy, tool or document.</label>
+<input type="text" id="b-doc" data-k="basis.doc">
+<label class="f" for="b-change">When residents change (admission, discharge, needs change), how and when does the rota change?</label>
+<textarea id="b-change" data-k="basis.change"></textarea>
+</div>
+</section>
+<section class="step" id="s-q" data-title="Questions">
+<h2>5. A few questions</h2>
+<p>Tap an answer, then add a few words if you can. If something would show it better than words – a rota, a policy, a letter – say what it is.</p>
+<div id="qs"></div>
+</section>
+<section class="step" id="s-end" data-title="Finish">
+<h2>6. Documents and finish</h2>
+<div class="card">
+<h3>What could you send us? Tick all you have.</h3>
+<ul class="check" id="docs"></ul>
+<label class="f" for="docs-other">Anything else, or a better way to get this information?</label>
+<textarea id="docs-other" data-k="docs.other" placeholder="e.g. “Easier to talk it through – ring me Tuesday”"></textarea>
+<ul class="check"><li><label><input type="checkbox" data-k="docs.call"> I'd rather go through this on a call or in person</label></li></ul>
+</div>
+<div class="card">
+<h3>Your progress for <span data-home></span></h3>
+<p id="summary"></p>
+<div class="row"><button class="btn" id="submit" type="button">I've finished this home – send my answers</button><button class="btn ghost" id="copy" type="button">Copy my answers</button></div>
+<div id="done" class="okmsg" hidden>Thank you. Your answers for this home have been sent. You can still come back and change them.</div>
+</div>
+</section>
+</main>
+<p class="small muted" style="max-width:760px;margin:0 auto;padding:0 16px 40px">Your answers are seen by the people helping for this home and the central finance team. Only you can change them. Shift figures are from Sona, 1 October – 20 November 2026.</p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+{
+const SUPABASE_URL='https://tdhggqurzrmlchzthkrw.supabase.co';
+const SUPABASE_KEY='sb_publishable_1CT22NudqbxuFN3DqqVRig_vbCm-pdU'; // publishable (anon) key only
+const ALLHOMES=["Eltisley", "Howe Dell", "Coach House", "Greenwood Cottage", "Lavender Lodge", "Winnett Cottage", "Windermere House", "7 & 8 Windsor", "The Leys", "Lansdowne Road", "Bromham Road"];
+const TPL={"7 & 8 Windsor":{"Oct":{"Day":{"support":[1.8,1.6]}},"Nov":{"Day":{"support":[1.3,0.8]}}},"Bromham Road":{"Oct":{"Day":{"oneone":[0.0,0.0],"senior":[1.4,1.4],"support":[4.0,2.5]},"Night":{"senior":[0.0,0.0],"sleepin":[1.0,1.0],"support":[0.4,0.4],"wakenight":[0.6,0.6]}},"Nov":{"Day":{"senior":[1.4,1.4],"support":[2.6,2.6]},"Night":{"sleepin":[0.9,1.0],"support":[0.3,0.4],"wakenight":[0.7,0.6]}}},"Coach House":{"Oct":{"Day":{"support":[2.0,2.0]},"Night":{"support":[2.1,1.6]}},"Nov":{"Day":{"support":[2.1,1.8]},"Night":{"support":[2.0,1.4]}}},"Eltisley":{"Oct":{"Day":{"nurses":[2.5,2.4],"senior":[0.8,0.8],"support":[13.3,13.2]},"Night":{"nurses":[2.2,2.2],"oneone":[0.1,0.1],"support":[6.4,6.4]}},"Nov":{"Day":{"nurses":[2.2,2.2],"senior":[0.7,0.7],"support":[14.8,14.8]},"Night":{"nurses":[1.9,1.9],"support":[7.0,6.8]}}},"Greenwood Cottage":{"Oct":{"Day":{"oneone":[0.1,0.1],"senior":[0.5,0.5],"support":[2.8,2.8]},"Night":{"oneone":[0.1,0.1],"support":[1.0,1.0]}},"Nov":{"Day":{"oneone":[0.1,0.1],"senior":[0.6,0.6],"support":[2.7,2.7]},"Night":{"support":[1.0,1.0]}}},"Howe Dell":{"Oct":{"Day":{"nurses":[1.4,1.4],"oneone":[0.4,0.3],"senior":[0.1,0.1],"support":[5.2,4.9]},"Night":{"nurses":[1.0,0.9],"support":[2.3,2.1]}},"Nov":{"Day":{"nurses":[1.6,1.6],"oneone":[0.8,0.7],"support":[5.5,5.0]},"Night":{"nurses":[0.9,1.0],"support":[2.6,2.4]}}},"Lansdowne Road":{"Oct":{"Day":{"senior":[0.7,0.7],"support":[4.3,4.0]},"Night":{"oneone":[0.0,0.0],"sleepin":[1.0,1.0],"support":[0.7,0.7],"wakenight":[0.4,0.4]}},"Nov":{"Day":{"oneone":[0.1,0.0],"senior":[0.7,0.4],"support":[4.0,3.6]},"Night":{"sleepin":[1.0,1.0],"support":[0.8,0.7],"wakenight":[0.5,0.4]}}},"Lavender Lodge":{"Oct":{"Day":{"senior":[0.7,0.7],"support":[2.8,2.5]},"Night":{"support":[2.0,2.0]}},"Nov":{"Day":{"oneone":[0.1,0.1],"senior":[0.8,0.8],"support":[3.0,2.7]},"Night":{"oneone":[0.1,0.2],"support":[2.0,2.0]}}},"The Leys":{"Oct":{"Day":{"senior":[0.7,0.7],"support":[5.3,5.1]},"Night":{"oneone":[0.0,0.0],"sleepin":[1.0,1.0],"support":[1.0,1.0]}},"Nov":{"Day":{"oneone":[0.1,0.1],"senior":[0.8,0.8],"support":[5.0,4.9]},"Night":{"sleepin":[1.0,1.0],"support":[1.1,1.0]}}},"Windermere House":{"Oct":{"Day":{"oneone":[0.2,0.2],"senior":[0.3,0.3],"support":[2.4,2.4]},"Night":{"support":[2.0,2.0]}},"Nov":{"Day":{"oneone":[0.1,0.1],"senior":[0.3,0.3],"support":[2.0,2.0]},"Night":{"support":[2.0,2.0]}}},"Winnett Cottage":{"Oct":{"Day":{"senior":[0.3,0.3],"support":[2.2,2.1]},"Night":{"support":[2.2,2.2]}},"Nov":{"Day":{"senior":[0.3,0.3],"support":[2.1,2.0]},"Night":{"support":[2.4,2.0]}}}};
+const FACTS={"Eltisley":{"beds":36.5,"cap":39,"breaksPaid":2,"sleepinNight":null,"agencyShifts":186,"unfilled":20,"shifts":1693,"main":"07:45–20:15, 19:45–08:15","oneone":0.0},"Howe Dell":{"beds":19,"cap":19,"breaksPaid":100,"sleepinNight":null,"agencyShifts":3,"unfilled":89,"shifts":811,"main":"07:45–20:15, 19:45–08:15","oneone":0.4},"Coach House":{"beds":9,"cap":10,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":36,"shifts":187,"main":"07:45–20:15, 19:45–08:15","oneone":0.0},"Greenwood Cottage":{"beds":4.1,"cap":6,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":0,"shifts":230,"main":"07:45–20:15, 20:00–08:00","oneone":0.1},"Lavender Lodge":{"beds":9,"cap":9,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":13,"shifts":298,"main":"08:00–20:30, 20:00–08:30","oneone":0.1},"Winnett Cottage":{"beds":10,"cap":10,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":12,"shifts":271,"main":"20:00–08:30, 08:00–20:30","oneone":0.0},"Windermere House":{"beds":7,"cap":10,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":0,"shifts":276,"main":"08:00–20:30, 20:00–08:30","oneone":0.1},"7 & 8 Windsor":{"beds":6,"cap":7,"breaksPaid":100,"sleepinNight":null,"agencyShifts":0,"unfilled":18,"shifts":67,"main":"08:00–20:30, 08:00–16:00","oneone":0.0},"The Leys":{"beds":8,"cap":9,"breaksPaid":100,"sleepinNight":129,"agencyShifts":0,"unfilled":11,"shifts":419,"main":"21:00–07:00, 07:00–15:00","oneone":0.1},"Lansdowne Road":{"beds":9,"cap":12,"breaksPaid":100,"sleepinNight":131,"agencyShifts":2,"unfilled":26,"shifts":339,"main":"21:00–07:00, 07:00–21:00","oneone":0.0},"Bromham Road":{"beds":6,"cap":6,"breaksPaid":100,"sleepinNight":130,"agencyShifts":0,"unfilled":49,"shifts":351,"main":"21:00–07:00, 07:00–15:00","oneone":0.0}};
+const DAYS=[];for(let d=new Date(Date.UTC(2026,9,1));d<=new Date(Date.UTC(2026,10,30));d.setUTCDate(d.getUTCDate()+1))DAYS.push(d.toISOString().slice(0,10));
+const fmt=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+const blank=()=>({you:{},census:{days:{},usual:{}},patients:[],need:{},basis:{},q:{},docs:{list:{}},status:'draft'});
+let HOME=null,S=blank(),YOU={};
+let sb=null,sv=null,me=null,timer=null,OTH=[],ROLE=null,MYHOMES=[];
+const $=s=>document.querySelector(s);
+const get=(o,k)=>k.split('.').reduce((a,b)=>a&&a[b],o);
+const set=(o,k,v)=>{const p=k.split('.');let a=o;for(let i=0;i<p.length-1;i++)a=a[p[i]]=a[p[i]]||{};a[p[p.length-1]]=v};
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const F=()=>FACTS[HOME]||{};
+function QS(){const f=F(),q=[];
+q.push(['occupancy','Was the home full in October and November? If not, why not?',f.beds!=null?`The finance report shows about <b>${f.beds}</b> residents against <b>${f.cap}</b> places.`:'']);
+q.push(['decide','Who decides how many staff are on each shift, and what do they base it on?','']);
+q.push(['needs','When a resident\'s needs go up or down, how quickly does the rota change?','']);
+q.push(['breaks','Do staff take an unpaid break on long shifts? If not, why not?',f.breaksPaid!=null?`Pay records show <b>${f.breaksPaid}%</b> of 12.5-hour shifts paid in full, with no break taken off.`:'']);
+q.push(['handover','How long is the handover between day and night staff? Is all of it needed?',f.main?`The usual shifts in Sona are <b>${esc(f.main)}</b>.`:'']);
+q.push(['nights','At night, how many staff need to be awake, and is a sleep-in needed? Why?','']);
+if(f.sleepinNight)q.push(['sleepin','How are sleep-ins paid at this home?',`Sona pays sleep-ins at about <b>£${f.sleepinNight} a night</b>, paid by the hour.`]);
+q.push(['agency','When is agency used, and why couldn\'t bank or own staff cover?',`Sona shows <b>${f.agencyShifts||0}</b> agency shifts from 1 October to 20 November.`]);
+q.push(['unfilled','What happens when a shift on the rota isn\'t filled?',`Sona shows <b>${f.unfilled||0}</b> unfilled shifts from 1 October to 20 November.`]);
+q.push(['offrota','Does anyone work at the home who isn\'t on the Sona rota (manager, salaried staff, agency booked by phone)?','']);
+q.push(['unfunded','Is any extra support residents need not funded? Has more funding been asked for?','Support a resident needs but that isn\'t funded is a conversation with the commissioner – not a cut.']);
+q.push(['other','Is there anything else we should know about staffing at this home?','']);return q}
+const DOCS=['Occupancy records','Residents\' support or care plans (names removed)','Funding letters or placement agreements','Staffing or dependency assessment','Duty rota for staff not on Sona','Agency booking records'];
+function saveSoon(){$('#save').textContent='Saving…';clearTimeout(timer);timer=setTimeout(save,1200);progress()}
+async function save(){if(!sv||!me||!HOME)return;
+try{S.updated=new Date().toISOString();S.you=YOU;
+const {error}=await sv.from('ch_answer').upsert({user_id:me.id,home:HOME,email:(me.email||'').toLowerCase(),data:JSON.parse(JSON.stringify(S)),status:S.status==='submitted'?'submitted':'draft',updated_at:S.updated},{onConflict:'user_id,home'});
+if(error)throw error;$('#save').textContent=`Saved ✓ (${HOME})`;$('#nodb').hidden=true}
+catch(e){$('#save').textContent='Not saved – check your connection. Your answers stay on this screen.';$('#nodb').hidden=false}}
+const sections=[...document.querySelectorAll('section.step')];
+$('#steps').innerHTML=sections.map((s,i)=>`<button type="button" data-go="${s.id}">${i+1}. ${s.dataset.title}</button>`).join('');
+$('#steps').addEventListener('click',e=>{const b=e.target.closest('button');if(b)document.getElementById(b.dataset.go).scrollIntoView({behavior:'smooth'})});
+const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)for(const b of $('#steps').children)b.setAttribute('aria-current',b.dataset.go===e.target.id)},{rootMargin:'-40% 0px -55% 0px'});
+sections.forEach(s=>io.observe(s));
+function bindAll(root){
+root.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;const tgt=k.startsWith('you.')?()=>({you:YOU}):()=>S;
+if(el.classList.contains('choices')&&el.dataset.multi){const cur=()=>get(tgt(),k)||[];el.innerHTML=el.dataset.opts.split('|').map(o=>`<button type="button" aria-pressed="${cur().includes(o)}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;let a=[...cur()];a=a.includes(v)?a.filter(x=>x!==v):[...a,v];set(tgt(),k,a);b.setAttribute('aria-pressed',a.includes(v));saveSoon()}}
+else if(el.classList.contains('choices')){el.innerHTML=el.dataset.opts.split('|').map(o=>`<button type="button" aria-pressed="${get(tgt(),k)===o}" data-v="${esc(o)}">${esc(o)}</button>`).join('');
+el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;set(tgt(),k,get(tgt(),k)===v?'':v);el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===get(tgt(),k)));saveSoon()}}
+else if(el.type==='checkbox'){el.checked=!!get(tgt(),k);el.onchange=()=>{set(tgt(),k,el.checked);saveSoon()}}
+else{el.value=get(tgt(),k)??'';el.oninput=()=>{set(tgt(),k,el.type==='number'?(el.value===''?'':+el.value):el.value);saveSoon()}}})}
+const when=t=>t?new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+const whoOf=o=>esc((o.data?.you?.name||o.email||'Someone')+(o.data?.you?.role?', '+o.data.you.role:''));
+const OH=()=>OTH.filter(o=>o.home===HOME);
+function othersHtml(fn,title='What others have said'){
+const li=OH().map(o=>{let v='';try{v=fn(o.data||{})}catch(e){}return v?`<li><b>${whoOf(o)}</b> <span class="muted small">${when(o.updated_at)}</span>: ${esc(v)}</li>`:''}).filter(Boolean);
+return li.length?`<div class="others"><div class="small muted">${title}</div><ul>${li.join('')}</ul></div>`:''}
+function latestOther(fn){let best=null;for(const o of OH()){const v=fn(o.data||{});if(v!==undefined&&v!==''&&v!==null&&(!best||o.updated_at>best.t))best={v,t:o.updated_at,who:o.data?.you?.name||o.email}}return best}
+const joinA=a=>(a||[]).join(', ');
+function renderCensus(){const f=F();
+$('#censusFact').innerHTML=f.beds!=null?`The finance report shows about <b>${f.beds}</b> residents at ${esc(HOME)} (September average) against <b>${f.cap}</b> places. It does not show day-by-day numbers.`:'';
+const weeks={};DAYS.forEach(d=>{const t=new Date(d+'T12:00:00Z');const mon=new Date(t);mon.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));(weeks[mon.toISOString().slice(0,10)]??=[]).push(d)});
+$('#weeks').innerHTML=Object.entries(weeks).map(([wk,ds])=>`<details class="week"><summary>Week from ${fmt(wk)} <span class="pill" data-wk="${wk}"></span></summary><div class="in"><table class="days"><thead><tr><th>Day</th><th>Residents</th><th></th></tr></thead><tbody>${ds.map(d=>`<tr><td class="d">${fmt(d)}</td><td><input type="number" min="0" max="60" inputmode="numeric" aria-label="Residents ${fmt(d)}" data-day="${d}"></td><td><button class="btn ghost small" type="button" data-copy="${d}">Same as day before</button></td></tr>`).join('')}</tbody></table></div></details>`).join('');
+fillDays()}
+function fillDays(){document.querySelectorAll('[data-day]').forEach(i=>{const v=S.census.days[i.dataset.day];i.value=v??'';const o=latestOther(d=>d.census?.days?.[i.dataset.day]);i.placeholder=o?String(o.v):'';i.title=o?`${o.who} entered ${o.v}`:''});
+['Oct','Nov'].forEach(m=>{const i=$('#u-'+m);const o=latestOther(d=>d.census?.usual?.[m]);i.placeholder=o?String(o.v):'';i.title=o?`${o.who} entered ${o.v}`:''});weekPills()}
+function weekPills(){document.querySelectorAll('[data-wk]').forEach(p=>{const tb=p.closest('details').querySelectorAll('[data-day]');const n=[...tb].filter(i=>i.value!=='').length;p.textContent=n===tb.length?'done':`${n}/${tb.length} filled`})}
+$('#weeks').addEventListener('input',e=>{const i=e.target;if(!i.dataset.day)return;S.census.days[i.dataset.day]=i.value===''?'':+i.value;weekPills();saveSoon()});
+$('#weeks').addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(!b)return;const ix=DAYS.indexOf(b.dataset.copy);if(ix<1)return;S.census.days[b.dataset.copy]=S.census.days[DAYS[ix-1]]??'';fillDays();saveSoon()});
+$('#fillUsual').addEventListener('click',()=>{DAYS.forEach(d=>{const m=d.slice(5,7)==='10'?'Oct':'Nov';const u=S.census.usual[m];if((S.census.days[d]===undefined||S.census.days[d]==='')&&u!==undefined&&u!=='')S.census.days[d]=u});fillDays();saveSoon()});
+const LEVEL='1:1 some of the day|1:1 all day|1:1 day and night|2:1|Extra support, not 1:1';
+const REASON='Risk to self|Risk to others|Absconsion risk|Physical health|Behaviour that challenges|Personal care|Community access|Other';
+const HRS='None|Part of the shift|Whole shift';
+function renderPatients(){const f=F();
+$('#oneoneFact').innerHTML=`Sona shows about <b>${f.oneone||0}</b> 1:1 shifts a day at ${esc(HOME)} from 1 October to 20 November. 1:1 shifts in Sona are not linked to a resident.`;
+const op=[];for(const o of OH())for(const p of (o.data?.patients||[]))if(p&&p.ref)op.push({o,p});
+$('#othersPts').innerHTML=op.length?`<div class="others"><div class="small muted">Residents others have already added – if you know more about one, add your own card with the same ref</div><ul>${op.map(({o,p})=>`<li><b>${esc(p.ref)}</b> ${esc(p.level||'')}${p.reason?' – '+esc(p.reason):''}; days: ${esc(p.day||'?')}, nights: ${esc(p.night||'?')}; funded: ${esc(p.funded||'?')} <span class="muted small">– ${whoOf(o)}</span></li>`).join('')}</ul></div>`:'';
+$('#patients').innerHTML=S.patients.map((p,i)=>`<div class="card" data-pt="${i}">
+<div class="row" style="margin-top:0;justify-content:space-between"><h3 style="margin:0">Resident ${i+1}</h3><button class="btn ghost small" type="button" data-del="${i}">Remove</button></div>
+<label class="f">Initials or ref (no names)</label><input type="text" data-k="patients.${i}.ref">
+<label class="f">Level of support</label><div class="choices" data-k="patients.${i}.level" data-opts="${LEVEL}"></div>
+<label class="f">Main reason</label><div class="choices" data-k="patients.${i}.reason" data-opts="${REASON}"></div>
+<label class="f">Who decided it?</label><div class="choices" data-k="patients.${i}.by" data-opts="Support or care plan|Commissioner / social worker|Home manager|Clinician|Not sure"></div>
+<div class="grid2"><div><label class="f">From</label><input type="date" min="2025-01-01" max="2026-12-31" data-k="patients.${i}.from"></div><div><label class="f">Until (blank if still needed)</label><input type="date" min="2025-01-01" max="2026-12-31" data-k="patients.${i}.to"></div></div>
+<label class="f">Needed on DAY shifts</label><div class="choices" data-k="patients.${i}.day" data-opts="${HRS}"></div>
+<label class="f">Needed on NIGHT shifts</label><div class="choices" data-k="patients.${i}.night" data-opts="${HRS}"></div>
+<label class="f">If part of a shift, roughly how many hours a day?</label><input type="text" data-k="patients.${i}.partHrs" placeholder="e.g. 6 hours, mornings only">
+<label class="f">Where is this need written down?</label><div class="choices" data-k="patients.${i}.where" data-multi="1" data-opts="Support / care plan|Placement agreement|Commissioner letter|Not written down"></div>
+<label class="f">Is it funded?</label><div class="choices" data-k="patients.${i}.funded" data-opts="Yes – all of it|Partly|No|Asked for, waiting|Not sure"></div>
+<label class="f">If partly, what is funded?</label><input type="text" data-k="patients.${i}.fundedWhat">
+<label class="f">Who pays? (commissioner)</label><input type="text" data-k="patients.${i}.commissioner">
+<label class="f">Anything else</label><textarea data-k="patients.${i}.note"></textarea></div>`).join('');
+bindAll($('#patients'))}
+$('#addPt').addEventListener('click',()=>{S.patients.push({});renderPatients();saveSoon();document.querySelector(`[data-pt="${S.patients.length-1}"]`).scrollIntoView({behavior:'smooth',block:'start'})});
+$('#patients').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;const i=+b.dataset.del;if(b.dataset.sure){S.patients.splice(i,1);renderPatients();saveSoon()}else{b.dataset.sure='1';b.textContent='Tap again to remove'}});
+const ROLES=[['nurses','Nurses'],['senior','Deputy / senior on shift'],['support','Support workers'],['oneone','1:1 staff'],['wakenight','Waking night staff'],['sleepin','Sleep-in']];
+function stepper(k,label){return `<div><label class="f">${label}</label><div class="stepper" data-step="${k}"><button type="button" data-d="-1" aria-label="less">−</button><output>${get(S,k)??'?'}</output><button type="button" data-d="1" aria-label="more">+</button></div></div>`}
+function tplTable(){const T=TPL[HOME]||{};const has=r=>['Oct','Nov'].some(m=>['Day','Night'].some(p=>T[m]?.[p]?.[r]));
+const rows=ROLES.filter(([r])=>has(r));
+const cell=(m,p,r)=>{const v=T[m]?.[p]?.[r];return v?`${v[0]} <span class="muted">/ ${v[1]}</span>`:'<span class="muted">–</span>'};
+return rows.length?`<div style="overflow-x:auto"><table class="days"><thead><tr><th>Average shifts a day<br><span class="muted">proposed / filled</span></th><th>Oct day</th><th>Oct night</th><th>Nov day</th><th>Nov night</th></tr></thead><tbody>${rows.map(([r,l])=>`<tr><td class="d">${l}</td>${['Oct','Nov'].map(m=>['Day','Night'].map(p=>`<td>${cell(m,p,r)}</td>`).join('')).join('')}</tr>`).join('')}</tbody></table></div><p class="small muted" style="margin:6px 0 0">From Sona. Day = shifts starting before 6pm (earlies and lates both count). November is 1–20 November.</p>`:'<p class="muted">No rota shifts found in Sona for this home.</p>'}
+function renderNeed(){const nursing=['Eltisley','Howe Dell'].includes(HOME);
+$('#needCard').innerHTML=`<div class="card"><h3 style="margin-top:0">${esc(HOME)}</h3>${tplTable()}
+${othersHtml(d=>{const n=d.need||{};const p=[];if(n.tplRight)p.push('Sona rota: '+n.tplRight);if(n.offSona?.length)p.push('not on Sona: '+joinA(n.offSona)+(n.offSonaWho?' ('+n.offSonaWho+')':''));const k=['dayRmn','daySup','senior','nightRmn','wake','sleep'].filter(x=>n[x]!==undefined);if(k.length)p.push(`needs: ${n.dayRmn!==undefined?n.dayRmn+' nurses by day, ':''}${n.daySup??'?'} support by day, ${n.senior??'?'} senior, ${n.nightRmn!==undefined?n.nightRmn+' nurses at night, ':''}${n.wake??'?'} awake at night, ${n.sleep??'?'} sleep-in`+(n.forPts?` for ${n.forPts} residents`:''));if(n.how)p.push('worked out by: '+n.how);return p.join('; ')})}
+<label class="f">Is the “proposed” rota above what you plan to run?</label><div class="choices" data-k="need.tplRight" data-opts="Yes, that's right|No – too high|No – too low|Not sure"></div>
+<label class="f">Does anyone work here who is NOT on the Sona rota?</label><div class="choices" data-k="need.offSona" data-multi="1" data-opts="No|Home manager|Salaried staff|Agency booked outside Sona|Bank staff by phone|Staff from another home|Not sure"></div>
+<label class="f">Who, and roughly how many shifts a week?</label><input type="text" data-k="need.offSonaWho">
+<h3>What the home really needs on a normal day and night (not counting 1:1)</h3>
+<div class="grid3">${nursing?stepper('need.dayRmn','Nurses by day'):''}${stepper('need.daySup','Support staff on at once, by day')}${stepper('need.senior','Deputy / senior on shift')}${nursing?stepper('need.nightRmn','Nurses at night'):''}${stepper('need.wake','Staff awake at night')}${stepper('need.sleep','Sleep-in staff')}</div>
+<label class="f">For how many residents is that?</label><input type="number" min="0" max="60" inputmode="numeric" data-k="need.forPts">
+<label class="f">How did you work this out?</label><input type="text" data-k="need.how" placeholder="e.g. registration, needs assessment, placement agreements, experience">
+<label class="f">What changes if there are more residents, or a resident becomes more unwell?</label><textarea data-k="need.more"></textarea></div>`;
+bindAll($('#needCard'))}
+$('#needCard').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const st=b.closest('[data-step]');const k=st.dataset.step;let v=get(S,k);v=Math.max(0,(v===undefined||v===''?0:+v)+(+b.dataset.d));set(S,k,v);st.querySelector('output').textContent=v;saveSoon()});
+function renderQs(){$('#qs').innerHTML=QS().map(([id,q,sona],i)=>`<div class="card"><h3 style="margin-top:0">${i+1}. ${q}</h3>${sona?`<div class="sona">What the records show: ${sona}</div>`:''}
+${othersHtml(d=>{const a=d.q?.[id];if(!a||(!a.a&&!a.more&&!a.evidence))return '';return [a.a,a.more,a.evidence?'('+a.evidence+')':''].filter(Boolean).join(' – ')})}
+<div class="choices" data-k="q.${id}.a" data-opts="Yes|No|Partly|Not sure"></div>
+<label class="f">Tell us more (optional)</label><textarea data-k="q.${id}.more"></textarea>
+<label class="f">Something that shows this, or who else would know (optional)</label><input type="text" data-k="q.${id}.evidence"></div>`).join('');bindAll($('#qs'))}
+function renderDocs(){$('#docs').innerHTML=DOCS.map((d,i)=>`<li><label><input type="checkbox" data-k="docs.list.d${i}"> ${esc(d)}</label></li>`).join('');bindAll($('#docs'))}
+function renderBasis(){$('#othersBasis').innerHTML=othersHtml(d=>{const b=d.basis||{};const p=[];if(b.methods?.length)p.push(joinA(b.methods));if(b.who)p.push('set by: '+b.who);if(b.doc)p.push('written in: '+b.doc);if(b.change)p.push('changes: '+b.change);return p.join('; ')})}
+function progress(){if(!HOME)return;const filled=DAYS.filter(d=>S.census.days[d]!==undefined&&S.census.days[d]!=='').length;const qs=QS();const qa=qs.filter(([id])=>S.q[id]?.a).length;
+$('#summary').textContent=`Residents: ${filled} of ${DAYS.length} days filled. Residents with extra support added: ${S.patients.length}. Rota: ${S.need.tplRight?'answered':'not yet answered'}, basis ${S.basis?.methods?.length?'given':'not yet given'}. Questions answered: ${qa} of ${qs.length}.`;
+const b=$('#steps').children;b[0].classList.toggle('done',!!YOU.name);b[1].classList.toggle('done',filled===DAYS.length);b[2].classList.toggle('done',S.patients.length>0);b[3].classList.toggle('done',!!S.need.tplRight);b[4].classList.toggle('done',qa===qs.length);b[5].classList.toggle('done',S.status==='submitted');$('#done').hidden=S.status!=='submitted'}
+function text(){const L=[`CARE HOME STAFFING ANSWERS – ${HOME}`,`From: ${YOU.name||''} (${YOU.role||''})`,'','RESIDENTS PER DAY'];
+DAYS.forEach(d=>{const v=S.census.days[d];if(v!==undefined&&v!=='')L.push(`${d}: ${v}`)});
+L.push('','RESIDENTS WITH EXTRA SUPPORT');S.patients.forEach((p,i)=>L.push(`${i+1}. ${['ref','level','reason','by','from','to','day','night','partHrs','where','funded','fundedWhat','commissioner','note'].map(k=>`${k}: ${Array.isArray(p[k])?p[k].join(', '):(p[k]??'')}`).join('; ')}`));
+const n=S.need;L.push('','ROTA',`Sona rota right? ${n.tplRight||''}; not on Sona: ${joinA(n.offSona)} ${n.offSonaWho||''}`,`Needs: nurses day ${n.dayRmn??''}, support day ${n.daySup??''}, senior ${n.senior??''}, nurses night ${n.nightRmn??''}, awake at night ${n.wake??''}, sleep-in ${n.sleep??''}; for ${n.forPts??''} residents; worked out by: ${n.how||''}`,`Based on: ${joinA(S.basis.methods)}; set by: ${S.basis.who||''}; written in: ${S.basis.doc||''}; changes: ${S.basis.change||''}`,'','QUESTIONS');
+QS().forEach(([id,q],i)=>{const a=S.q[id]||{};L.push(`${i+1}. ${q}`,`   ${a.a||''} – ${a.more||''} ${a.evidence?'[evidence: '+a.evidence+']':''}`)});
+L.push('','CAN SEND: '+DOCS.filter((d,i)=>S.docs.list['d'+i]).join(', '),'OTHER: '+(S.docs.other||''));return L.join('\n')}
+$('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(text());$('#copy').textContent='Copied ✓'}catch(e){$('#copy').textContent='Copy failed – select the text instead'}});
+$('#submit').addEventListener('click',async()=>{S.status='submitted';S.submittedAt=new Date().toISOString();await save();progress()});
+function renderAll(){if(!HOME)return;document.querySelectorAll('[data-home]').forEach(e=>e.textContent=HOME);
+bindAll($('#s-you'));bindAll($('#usualCard'));bindAll($('#s-census .card:last-child'));bindAll($('#s-oneone .card:last-child'));bindAll($('#s-need > .card:last-child'));bindAll($('#s-end'));
+renderCensus();renderPatients();renderNeed();renderBasis();renderQs();renderDocs();progress()}
+async function loadHome(h){HOME=h;S=blank();
+const {data:row}=await sv.from('ch_answer').select('data,status').eq('home',h).eq('user_id',me.id).maybeSingle();
+const d=row&&row.data;if(d&&typeof d==='object'){S=Object.assign(blank(),d);S.census.days??={};S.census.usual??={};S.need??={};S.q??={};S.basis??={};S.docs??={list:{}};S.docs.list??={};if(d.you&&!YOU.name)YOU=d.you}
+$('#homeNote').textContent=(FACTS[h]&&FACTS[h].beds!=null)?`Finance report: about ${FACTS[h].beds} residents, ${FACTS[h].cap} places.`:'';
+renderAll();$('#save').textContent=d?`Your earlier answers for ${h} are loaded.`:`Answers for ${h} save automatically.`}
+(async()=>{
+const gate=(msg,showBtn=true)=>{$('#gate').hidden=false;$('#app').hidden=true;$('#gateMsg').innerHTML=msg;$('#signIn').hidden=!showBtn};
+if(!window.supabase){gate('This page could not load its sign-in library. Check your internet connection and refresh.',false);return}
+sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'pkce',storageKey:'nouvita-carehomes-auth'}}); // own sign-in, never shared with the HR page
+sv=sb.schema('nouvita_survey');
+$('#signIn').onclick=async()=>{const {error}=await sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo:location.origin+location.pathname}});if(error){$('#gateErr').textContent=error.message;$('#gateErr').hidden=false}};
+$('#signOut').onclick=async()=>{await sb.auth.signOut();location.replace(location.pathname)};
+const {data:{session}}=await sb.auth.getSession();
+if(!session){gate('Sign in with your Nouvita Microsoft account to answer. You can stop at any time – your answers are saved and you can come back later.');return}
+me=session.user;
+const {data:role,error:rErr}=await sv.rpc('ch_access');
+if(rErr){gate(/schema must be one of|Invalid schema/i.test(rErr.message)?'Not set up yet. Please tell the finance team.':esc(rErr.message),false);return}
+if(!role){gate(`Signed in as <b>${esc(me.email)}</b>, but this account is not on the list for this questionnaire. Please ask the finance team to add you.`,false);
+const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=$('#signOut').onclick;$('#gate').appendChild(b);return}
+ROLE=role;const {data:mh}=await sv.rpc('ch_my_homes');MYHOMES=(role==='admin'||!mh)?ALLHOMES:ALLHOMES.filter(h=>mh.includes(h));
+$('#gate').hidden=true;$('#app').hidden=false;
+$('#whoami').textContent=me.email+' · '+({admin:'admin',inviter:'can invite',contributor:'contributor'}[role]||role);
+YOU={name:me.user_metadata?.full_name||''};
+async function loadOthers(){const {data:all,error}=await sv.from('ch_answer').select('user_id,home,email,status,updated_at,data');if(error)return null;OTH=(all||[]).filter(r=>r.user_id!==me.id);return all}
+$('#homeSel').innerHTML=MYHOMES.map(h=>`<option>${esc(h)}</option>`).join('');
+$('#homeSel').onchange=async()=>{clearTimeout(timer);await save();await loadHome($('#homeSel').value)};
+$('#refresh').onclick=async()=>{const all=await loadOthers();if(all){renderAll();if(ROLE!=='contributor')peoplePanel(all)}};
+async function peoplePanel(all){
+const byHome={};(all||[]).forEach(r=>{byHome[r.home]=(byHome[r.home]||0)+1});
+$('#revCount').textContent=all?`Answers started for ${Object.keys(byHome).length} of ${ALLHOMES.length} homes; ${all.filter(r=>r.status==='submitted').length} finished.`:'';
+const {data:inv,error}=await sv.from('ch_invite').select('email,role,homes,name,granted_by').order('created_at');
+if(error){$('#invList').innerHTML=`<li>${esc(error.message)}</li>`;return}
+$('#invList').innerHTML=(inv||[]).map(i=>`<li><span><b>${esc(i.name||i.email)}</b> <span class="muted small">${esc(i.email)} · ${esc(i.role)} · ${i.homes?esc(i.homes.join(', ')):'all homes'}</span></span>${(ROLE==='admin'&&i.role!=='admin')||(i.role==='contributor'&&i.granted_by===me.email.toLowerCase())?`<button class="btn ghost small" type="button" data-rm="${esc(i.email)}">Remove</button>`:''}</li>`).join('')}
+const all0=await loadOthers();
+if(role==='admin'||role==='inviter'){
+$('#reviewer').hidden=false;await peoplePanel(all0);
+$('#invHomes').innerHTML=MYHOMES.map(h=>`<button type="button" aria-pressed="false" data-v="${esc(h)}">${esc(h)}</button>`).join('');
+$('#invHomes').onclick=e=>{const b=e.target.closest('button');if(b)b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true')};
+if(role==='admin'){$('#invRoleBox').hidden=false;$('#invRole').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('#invRole').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))}}
+$('#invAdd').onclick=async()=>{const e=$('#invEmail').value.trim().toLowerCase();const n=$('#invName').value.trim();
+const homes=[...$('#invHomes').querySelectorAll('[aria-pressed=true]')].map(b=>b.dataset.v);
+const rl=ROLE==='admin'?($('#invRole [aria-pressed=true]')?.dataset.v||'contributor'):'contributor';
+if(!/^[^@\s]+@nouvita\.co\.uk$/.test(e)){$('#invMsg').textContent='Use a Nouvita email address (…@nouvita.co.uk).';return}
+if(rl==='contributor'&&!homes.length){$('#invMsg').textContent='Tick at least one home they can answer for.';return}
+const {error}=await sv.from('ch_invite').insert({email:e,role:rl,homes:homes.length?homes:null,name:n||null,granted_by:me.email.toLowerCase()});
+$('#invMsg').textContent=error?(/duplicate|unique/i.test(error.message)?'That person is already on the list.':'Could not invite: '+error.message):`${e} can now sign in${homes.length?' for '+homes.join(', '):''}. Copy the link and send it to them.`;
+if(!error){$('#invEmail').value='';$('#invName').value='';$('#invHomes').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));peoplePanel(await loadOthers())}};
+$('#invList').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b)return;if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Tap again to remove';return}
+const {error}=await sv.from('ch_invite').delete().eq('email',b.dataset.rm);$('#invMsg').textContent=error?'Could not remove: '+error.message:'Removed. Their answers so far are kept.';peoplePanel(await loadOthers())};
+$('#copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+location.pathname);$('#copyLink').textContent='Link copied ✓'}catch(e){$('#invMsg').textContent='Link: '+location.origin+location.pathname}};
+$('#dlAll').onclick=async()=>{const {data:all}=await sv.from('ch_answer').select('user_id,home,email,status,updated_at,data');const blob=new Blob([JSON.stringify((all||[]).map(r=>({id:r.email,home:r.home,status:r.status,updated:r.updated_at,data:r.data})),null,1)],{type:'application/json'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`care-homes-answers-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove()};
+}
+if(!MYHOMES.length){gate('Your account is on the list but no homes are assigned to you yet. Please ask the finance team.',false);return}
+await loadHome(MYHOMES[0]);
+})();
+}
+</script>
+</body>
+</html>
