@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staffing planner</title>
+<!--
+Nouvita staffing planner -- 231126v1. GitHub Pages: hr-review/staffing-tools/
+Own sign-in session (Microsoft Entra via Supabase), own data (nouvita_survey.st_* tables), same access list as the care homes
+questionnaire (nouvita_survey.ch_invite). A contributor sees only the units on their invite; admin and inviters see all.
+Holds NO data in this file: every figure is read after sign-in, through row level security. Publishable (anon) key only.
+Never record names of patients or residents: initials or a reference only.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a manager's planner on the office wall, calm and exact
+   IDEA the duty sheet: who should be on against who is on, with the shift log beside it
+   PICTURE the live result for the manager's own unit: hours needed against the rota, the verdict and the gap
+   COLOUR white ground, deep ink, Nouvita teal for actions, red/amber/green/blue verdicts only
+   TYPE Figtree 800 + Figtree
+   LAYOUT unit bar, tabs, then form left and result right on a laptop; one column on a phone */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1a1f);--panel:light-dark(#f3f7f8,#16252c);--ink:light-dark(#10232c,#e7f0f2);--muted:light-dark(#4f6670,#9db3bb);--line:light-dark(#d5e1e5,#2a3d45);--acc:light-dark(#00756d,#3cc3b6);--accInk:light-dark(#ffffff,#06201d);--red:light-dark(#c8102e,#ff6b7d);--amb:light-dark(#a85f00,#ffb547);--grn:light-dark(#1d7a3a,#6fd492);--blu:light-dark(#0a5cff,#7aa7ff);--grey:light-dark(#6b7580,#8d98a2)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(4vw,16px)}
+header.top{padding:20px 0 6px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;justify-content:space-between}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.05;margin:0;font-weight:800;letter-spacing:-.02em}
+h2{font-size:20px;margin:0 0 10px;font-weight:800}
+h3{font-size:16px;margin:16px 0 6px}
+.who{font-size:14px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.linkbtn{border:0;background:none;color:var(--acc);font:600 14px Figtree,sans-serif;cursor:pointer;min-height:40px;padding:0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chips button{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);font:600 14px Figtree,sans-serif;cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.c-red{background:var(--red)}.c-amber{background:var(--amb)}.c-green{background:var(--grn)}.c-blue{background:var(--blu)}.c-grey{background:var(--grey)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:8px 0 18px;overflow-x:auto}
+.tabs button{flex:none;border:0;background:none;color:var(--muted);font:700 15px Figtree,sans-serif;padding:12px 14px;min-height:44px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc)}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:26px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+label.f{display:block;font-weight:600;font-size:14px;margin:12px 0 5px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;font:16px Figtree,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-height:44px}
+textarea{min-height:70px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.btn{border:0;background:var(--acc);color:var(--accInk);border-radius:10px;padding:0 16px;font:700 15px Figtree,sans-serif;min-height:44px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.btn.small{min-height:36px;padding:0 10px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.hint,.note{font-size:13px;color:var(--muted)}
+.step{display:flex;gap:6px}.step button{flex:none;width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:800 20px Figtree,sans-serif;cursor:pointer}.step input{text-align:center}
+.res{border-top:3px solid var(--ink);padding-top:12px}
+.verdict{display:inline-block;font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px;color:#fff}
+.big{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-end;margin:10px 0 14px}
+.big .k{font-size:13px;color:var(--muted);font-weight:600}.big .n{font-size:clamp(28px,4.6vw,46px);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.bars{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;gap:8px 12px;align-items:center;margin-bottom:12px}
+.track{height:24px;background:var(--panel);border-radius:4px;overflow:hidden}.fill{height:100%;border-radius:4px}
+.val{font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+ul.plain{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}ul.plain li{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:8em minmax(0,1fr);gap:10px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5em,1fr));gap:10px;margin:12px 0}
+.fact{background:var(--panel);border-radius:8px;padding:8px 10px}.fact b{display:block;font-size:20px;font-weight:800}.fact span{font-size:12px;color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+td.l,th.l{text-align:left;white-space:normal}
+th{font-size:12px;color:var(--muted);font-weight:700}
+tfoot td{font-weight:800;border-top:2px solid var(--ink)}
+.over{color:var(--red);font-weight:700}
+.ok{color:var(--grn);font-weight:700}
+.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:4px 16px}
+.check{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px}.check label{display:flex;gap:6px;align-items:center;min-height:36px;font-size:14px}
+.check input{width:20px;height:20px}
+.banner{border:1px solid var(--amb);color:var(--amb);border-radius:10px;padding:10px 12px;margin:10px 0}
+.gate{max-width:460px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;text-align:center}
+[hidden]{display:none!important}
+@media(max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}.res{order:-1}}
+@media(max-width:600px){table{font-size:13px}th,td{padding:6px 4px}ul.plain li{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden><h1 style="font-size:26px">Staffing planner</h1><p id="gateMsg">Sign in with your Nouvita Microsoft account.</p><button class="btn" id="signIn" type="button">Sign in with Microsoft</button><p id="gateErr" class="banner" hidden></p></div>
+<div id="app" hidden>
+<div class="wrap">
+<header class="top"><h1 id="title">Staffing planner</h1><div class="who"><span id="whoami"></span><button class="linkbtn" id="signOut" type="button">Sign out</button></div></header>
+<nav class="chips" id="chips" aria-label="Units"></nav>
+<div class="row" style="margin-top:0"><span class="note">Week beginning</span><button class="btn ghost small" id="wkPrev" type="button" aria-label="Previous week">‹</button><b id="wkLabel"></b><button class="btn ghost small" id="wkNext" type="button" aria-label="Next week">›</button></div>
+<nav class="tabs" id="tabs" role="tablist"></nav>
+<main id="view"></main>
+<p class="note" style="margin:30px 0">Model v1: built independently from registered beds and service type; the clinical director's tool runs will replace it. Never record names of patients or residents: initials or a reference only.</p>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+{
+const SUPABASE_URL='https://tdhggqurzrmlchzthkrw.supabase.co';
+const SUPABASE_KEY='sb_publishable_1CT22NudqbxuFN3DqqVRig_vbCm-pdU'; // publishable (anon) key only
+const $=id=>document.getElementById(id);
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(+n||0).toLocaleString('en-GB');
+const money=n=>'£'+Math.round(Math.abs(+n||0)).toLocaleString('en-GB');
+const iso=d=>d.toISOString().slice(0,10);
+const monday=d=>{const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));x.setUTCDate(x.getUTCDate()-((x.getUTCDay()+6)%7));return x};
+const DOMAINS=[['Mobility and transfers','Independent|Needs prompting or aid|Needs 1 carer|Needs 2 carers or hoist'],['Personal care','Independent|Prompting|Help with some tasks|Full help'],['Continence','Continent|Occasional help|Regular help|Fully dependent'],['Eating and drinking','Independent|Prompting or set-up|Some help or monitoring|Full help or risk of choking'],['Medication and physical health','Self-manages|Prompted, stable health|Administered, some health needs|Complex needs or frequent checks'],['Mental state and engagement','Settled|Some support to engage|Frequent support or low mood/psychosis|Acutely unwell, intensive support'],['Behaviour and risk','No risk|Low, managed by plan|Regular incidents or de-escalation|High risk, frequent intervention'],['Communication and understanding','No difficulty|Some help|Significant help|Very limited'],['Night needs','Sleeps through|Occasional check or help|Help most nights|Care several times a night'],['Supervision or observation','General|Intermittent checks|Close supervision much of the day|Constant or 1:1']];
+const OBS=['General observation','Intermittent','Within eyesight (1:1)','Within arm\'s length (1:1)','2:1'];
+const FUND=['Funded','Requested','Not funded','Not asked'];
+const FLAGS=['Below the safety floor','More 1:1 or enhanced observation than planned','Staff sickness or no-show','Incident or restraint last shift','Admission or discharge due','Agency on shift','Physical health deterioration'];
+let sb,sv,me,ROLE,UNITS=[],RATES={},BANDS=[],WEEK=monday(new Date()),UNIT=null,TAB='planner',CACHE={};
+function gate(msg,btn=true){$('gate').hidden=false;$('app').hidden=true;$('gateMsg').innerHTML=msg;$('signIn').hidden=!btn}
+const isMgr=()=>ROLE==='admin'||ROLE==='inviter';
+const unitOf=k=>UNITS.find(u=>u.unit===k);
+function need(u,n,hpd){
+ const m=u.model;n=+n||0;
+ if(m.kind==='dom')return{h:(+hpd||m.hpd||0)*7,s:[['Visits',`${+hpd||m.hpd||0} hours of care a day`]],note:''};
+ if(m.kind==='dc'){if(!n)return{h:0,s:[['Centre','No one attending']],note:''};const k=Math.max(2,Math.ceil(n/m.ratio));return{h:k*35,s:[['08:45–16:15',`${k} day support workers (1 per ${m.ratio}, at least 2), Mon–Fri`]],note:''}}
+ if(!n)return{h:0,s:[['Unit','Closed: no rota staff needed']],note:''};
+ const ks=Object.keys(m.t).map(Number).sort((a,b)=>a-b),lo=ks[0],hi=Math.min(ks.at(-1),u.beds);
+ const k=Math.min(Math.max(Math.ceil(n),lo),hi),r=m.t[String(k)];
+ return{h:r.h,s:r.s.split(';').map(p=>{const i=p.indexOf(':');return[p.slice(0,i).trim(),p.slice(i+1).trim()]}),note:n<lo?`Below ${lo} the minimum safe staffing still applies.`:''}
+}
+function verdict(rota,h){if(!h&&!rota)return['grey','Closed'];if(!h)return['red','Rota with no one to staff'];if(rota<.5*h)return['grey','Rota not fully entered'];const p=(rota-h)/h;if(p>.15)return['red','Over establishment'];if(p>.05)return['amber','Slightly over'];if(p>=-.05)return['green','On establishment'];return['blue','Below the model: check the safety floor']}
+async function q(p){const {data,error}=await p;if(error)throw error;return data}
+async function weekData(){
+ const k=iso(WEEK);if(CACHE[k])return CACHE[k];
+ const [w,e]=await Promise.all([q(sv.from('st_week').select('*').eq('week',k)),q(sv.from('st_entry').select('*').eq('week',k))]);
+ return CACHE[k]={week:Object.fromEntries(w.map(r=>[r.unit,r])),entry:Object.fromEntries(e.map(r=>[r.unit,r]))};
+}
+function unitState(u,wd){const e=wd.entry[u.unit]||{},w=wd.week[u.unit]||{};const occ=e.occupied??null,rota=e.rota_hours??w.plan_this??0;const m=need(u,occ,e.hpd);const[c,t]=verdict(+rota,m.h);return{e,w,occ,rota:+rota,m,c,t,over:+rota-m.h}}
+async function chips(){
+ const wd=await weekData();
+ const list=(isMgr()?[{unit:'__all',name:'All units'}]:[]).concat(UNITS);
+ $('chips').hidden=list.length<2;
+ $('chips').innerHTML=list.map(u=>{const s=u.unit==='__all'?null:unitState(u,wd);return `<button type="button" data-u="${esc(u.unit)}" aria-pressed="${UNIT===u.unit}">${s?`<span class="dot c-${s.c}"></span>`:''}${esc(u.unit==='__all'?'All units':u.unit)}</button>`}).join('');
+}
+function tabs(){
+ const t=UNIT==='__all'?[['overview','Rota check'],...(isMgr()?[['people','People']]:[])]:[['planner','Planner'],['dependency','Dependency'],['obs','1:1 log'],['huddle','Shift huddle']];
+ if(!t.some(x=>x[0]===TAB))TAB=t[0][0];
+ $('tabs').innerHTML=t.map(([k,l])=>`<button role="tab" type="button" data-t="${k}" aria-selected="${TAB===k}">${l}</button>`).join('');
+}
+async function render(){
+ $('wkLabel').textContent=WEEK.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+ $('title').textContent=UNIT==='__all'?'Staffing planner: all units':(unitOf(UNIT)?.name||'Staffing planner');
+ await chips();tabs();
+ const v=$('view');v.innerHTML='<p class="note">Loading…</p>';
+ try{await ({planner,dependency,obs,huddle,overview,people})[TAB](v)}catch(e){v.innerHTML=`<div class="banner">Could not load: ${esc(e.message)}</div>`}
+}
+// ---------- planner
+async function planner(v){
+ const u=unitOf(UNIT),wd=await weekData(),s=unitState(u,wd),rate=RATES[u.unit];
+ const deps=await q(sv.from('st_dependency').select('total,band,ref,assessed_on').eq('unit',u.unit).eq('active',true));
+ const depH=latest(deps).reduce((a,d)=>a+(BANDS.find(b=>b.band===d.band)?.hours||0),0)*7;
+ const isDom=u.model.kind==='dom',lab=u.model.kind==='dc'?'Average attending a day':/Burberry|Mulberry|Oakley|Radley/.test(u.unit)?'Patients':isDom?'Tenants':'Residents';
+ v.innerHTML=`<div class="grid"><div class="panel"><h2>This week's figures</h2>
+ <label class="f" for="pOcc">${lab}</label><div class="step"><button type="button" data-d="-1" aria-label="One fewer">−</button><input type="number" id="pOcc" min="0" max="${u.beds}" value="${s.occ??''}" placeholder="enter"><button type="button" data-d="1" aria-label="One more">+</button></div><div class="hint">${u.beds} registered places.</div>
+ ${isDom?`<label class="f" for="pHpd">Commissioned care hours a day</label><input type="number" id="pHpd" step="0.5" min="0" value="${s.e.hpd??u.model.hpd??''}">`:''}
+ <label class="f" for="pRota">Rota hours this week (care roles, less breaks)</label><input type="number" id="pRota" min="0" step="0.5" value="${s.rota||''}"><div class="hint">Sona plan this week: ${fmt(s.w.plan_this)} h · next week: ${fmt(s.w.plan_next)} h.</div>
+ <label class="f" for="pNote">Note (optional)</label><textarea id="pNote" placeholder="e.g. admission Thursday; one resident in hospital">${esc(s.e.note||'')}</textarea>
+ <div class="row"><button class="btn" id="pSave" type="button">Save this week</button><span class="note" id="pMsg">${s.e.email?`Last saved by ${esc(s.e.email)}`:'Not saved yet this week'}</span></div></div>
+ <div><div class="res" id="pRes"></div>
+ <div class="facts"><div class="fact"><b>${fmt(s.w.worked_last)} h</b><span>worked last week</span></div><div class="fact"><b>${fmt(s.w.plan_last)} h</b><span>planned last week</span></div><div class="fact"><b>${s.w.unfilled_last??'–'}</b><span>unfilled shifts last week</span></div><div class="fact"><b>${s.w.agency_last??'–'}</b><span>agency shifts last week</span></div>${deps.length?`<div class="fact"><b>${fmt(depH)} h</b><span>direct care a week from ${latest(deps).length} dependency scores</span></div>`:''}</div>
+ <h3 id="pShH">Staff on each shift</h3><ul class="plain" id="pShifts"></ul><p class="note"><b>Safety floor:</b> ${esc(u.floor)}.</p></div></div>`;
+ const draw=()=>{const n=+$('pOcc').value||0,r=+$('pRota').value||0,m=need(u,$('pOcc').value===''?null:n,$('pHpd')?.value),d=r-m.h,[c,t]=verdict(r,m.h),mx=Math.max(r,m.h,1);
+  $('pRes').innerHTML=`<span class="verdict c-${c}">${t}</span><div class="big"><div><div class="k">Needed</div><div class="n">${fmt(m.h)} h</div></div><div><div class="k">On the rota</div><div class="n">${fmt(r)} h</div></div><div><div class="k">${d>=0?'Over':'Under'} by</div><div class="n">${fmt(Math.abs(d))} h</div></div>${rate?`<div><div class="k">A month</div><div class="n">${money(d*52/12*rate)}</div></div>`:''}</div>
+  <div class="bars"><span>Needed</span><div class="track"><div class="fill" style="width:${m.h/mx*100}%;background:var(--ink)"></div></div><span class="val">${fmt(m.h)} h</span><span>Rota</span><div class="track"><div class="fill" style="width:${r/mx*100}%;background:${c==='red'?'var(--red)':c==='amber'?'var(--amb)':'var(--grey)'}"></div></div><span class="val">${fmt(r)} h</span></div><p class="note">${m.note}</p>`;
+  $('pShH').textContent=`Staff on each shift for ${n} ${u.model.kind==='dc'?'attending':'people'}`;$('pShifts').innerHTML=m.s.map(([a,b])=>`<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')};
+ v.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('pOcc').value=Math.min(u.beds,Math.max(0,(+$('pOcc').value||0)+ +b.dataset.d));draw()});
+ ['pOcc','pRota','pHpd'].forEach(id=>$(id)&&($(id).oninput=draw));draw();
+ $('pSave').onclick=async()=>{try{await q(sv.from('st_entry').upsert({unit:u.unit,week:iso(WEEK),occupied:$('pOcc').value===''?null:+$('pOcc').value,rota_hours:+$('pRota').value||0,hpd:$('pHpd')?+$('pHpd').value||null:null,note:$('pNote').value.trim()||null,email:me.email.toLowerCase(),updated_at:new Date().toISOString()},{onConflict:'unit,week'}));delete CACHE[iso(WEEK)];$('pMsg').textContent='Saved ✓';chips()}catch(e){$('pMsg').textContent='Not saved: '+e.message}};
+}
+function latest(rows){const m={};for(const r of rows){if(!m[r.ref]||r.assessed_on>m[r.ref].assessed_on)m[r.ref]=r}return Object.values(m)}
+// ---------- dependency
+async function dependency(v){
+ const u=unitOf(UNIT);const rows=await q(sv.from('st_dependency').select('*').eq('unit',u.unit).order('assessed_on',{ascending:false}));
+ const act=latest(rows.filter(r=>r.active));const band=t=>BANDS.find(b=>t<=b.max)||BANDS.at(-1);
+ const totalH=act.reduce((a,r)=>a+(BANDS.find(b=>b.band===r.band)?.hours||0),0);
+ v.innerHTML=`<div class="grid"><div class="panel"><h2 id="dH">Score a resident</h2>
+ <label class="f" for="dRef">Initials or reference (no names)</label><input type="text" id="dRef" maxlength="12">
+ <label class="f" for="dDate">Assessed on</label><input type="date" id="dDate" value="${iso(new Date())}">
+ <div id="dScores"></div><p><b id="dTot"></b></p>
+ <div class="row"><button class="btn" id="dSave" type="button">Save score</button><button class="btn ghost" id="dNew" type="button">New</button><span class="note" id="dMsg"></span></div></div>
+ <div><h2>${act.length} residents scored: ${fmt(totalH*7)} direct care hours a week</h2>
+ <p class="note">Each resident scores 0–3 on ten needs (Rhys Hearn style). The band sets planning care hours a day: ${BANDS.map(b=>`${b.band} ${b.hours} h`).join(', ')}. The clinical director sets these values. Score everyone on admission, then monthly or when needs change.</p>
+ <div class="scroll"><table><thead><tr><th class="l">Resident</th><th>Assessed</th><th>Score</th><th class="l">Band</th><th>Hours a day</th><th></th></tr></thead><tbody>${act.sort((a,b)=>b.total-a.total).map(r=>`<tr><td class="l"><b>${esc(r.ref)}</b></td><td>${esc(r.assessed_on)}</td><td>${r.total}</td><td class="l">${esc(r.band)}</td><td>${BANDS.find(b=>b.band===r.band)?.hours??''}</td><td><button class="btn ghost small" data-edit="${r.id}" type="button">Rescore</button> <button class="btn ghost small" data-left="${r.id}" type="button">Left</button></td></tr>`).join('')||'<tr><td class="l" colspan="6">No one scored yet.</td></tr>'}</tbody></table></div></div></div>`;
+ const form=r=>{$('dRef').value=r?.ref||'';$('dDate').value=iso(new Date());$('dScores').innerHTML=`<div class="scores">${DOMAINS.map(([n,o],i)=>`<div><label class="f" for="ds${i}">${n}</label><select id="ds${i}">${o.split('|').map((t,k)=>`<option value="${k}" ${(r?.scores?.[i]??0)==k?'selected':''}>${k} – ${t}</option>`).join('')}</select></div>`).join('')}</div>`;$('dScores').querySelectorAll('select').forEach(s=>s.onchange=tot);tot()};
+ const sc=()=>DOMAINS.map((_,i)=>+$('ds'+i).value);function tot(){const t=sc().reduce((a,b)=>a+b,0),b=band(t);$('dTot').textContent=`Score ${t} of 30: ${b.band} (${b.hours} care hours a day)`}
+ form();$('dNew').onclick=()=>form();
+ v.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>form(rows.find(r=>r.id==b.dataset.edit)));
+ v.querySelectorAll('[data-left]').forEach(b=>b.onclick=async()=>{const r=rows.find(x=>x.id==b.dataset.left);await q(sv.from('st_dependency').update({active:false,email:me.email.toLowerCase()}).eq('unit',u.unit).eq('ref',r.ref));render()});
+ $('dSave').onclick=async()=>{const ref=$('dRef').value.trim();if(!ref){$('dMsg').textContent='Add initials or a reference.';return}const s=sc(),t=s.reduce((a,b)=>a+b,0);
+  try{await q(sv.from('st_dependency').insert({unit:u.unit,ref,assessed_on:$('dDate').value,scores:s,total:t,band:band(t).band,email:me.email.toLowerCase()}));render()}catch(e){$('dMsg').textContent='Not saved: '+e.message}};
+}
+// ---------- 1:1 log
+async function obs(v){
+ const u=unitOf(UNIT);const rows=await q(sv.from('st_obs').select('*').eq('unit',u.unit).order('started_on',{ascending:false}));
+ const live=rows.filter(r=>!r.ended_on),now=Date.now();const due=r=>!r.last_review||now-new Date(r.last_review).getTime()>24*3600e3;
+ const unfunded=live.filter(r=>/1:1|2:1/.test(r.level)&&r.funded!=='Funded').length;
+ v.innerHTML=`<div class="grid"><div class="panel"><h2>Start an observation</h2>
+ <label class="f" for="oRef">Initials or reference (no names)</label><input type="text" id="oRef" maxlength="12">
+ <label class="f" for="oLevel">Level</label><select id="oLevel">${OBS.map(o=>`<option>${esc(o)}</option>`).join('')}</select>
+ <label class="f" for="oReason">Reason</label><input type="text" id="oReason" placeholder="e.g. risk to self after incident">
+ <label class="f" for="oStart">Started</label><input type="date" id="oStart" value="${iso(new Date())}">
+ <label class="f" for="oFund">Funded?</label><select id="oFund">${FUND.map(o=>`<option ${o==='Not asked'?'selected':''}>${o}</option>`).join('')}</select>
+ <label class="f" for="oComm">Commissioner</label><input type="text" id="oComm">
+ <div class="row"><button class="btn" id="oSave" type="button">Start</button><span class="note" id="oMsg"></span></div></div>
+ <div><h2>${live.length} on enhanced observation now${live.filter(due).length?`: <span class="over">${live.filter(due).length} review overdue</span>`:''}</h2>
+ <p class="note">National guidance: each level is set for one person and reviewed at least every 24 hours. ${unfunded?`<span class="over">${unfunded} 1:1 or 2:1 not funded yet</span>: request funding from the commissioner.`:''}</p>
+ <div class="scroll"><table><thead><tr><th class="l">Person</th><th class="l">Level and reason</th><th>Since</th><th>Last review</th><th class="l">Funded</th><th></th></tr></thead><tbody>${live.map(r=>`<tr><td class="l"><b>${esc(r.ref)}</b></td><td class="l">${esc(r.level)}<br><span class="note">${esc(r.reason||'')}</span></td><td>${esc(r.started_on)}</td><td class="${due(r)?'over':''}">${r.last_review?new Date(r.last_review).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Not reviewed'}<br><span class="note">${esc(r.reviewed_by||'')}</span></td><td class="l">${esc(r.funded)}</td><td><button class="btn small" data-rev="${r.id}" type="button">Reviewed now</button> <button class="btn ghost small" data-end="${r.id}" type="button">End</button></td></tr>`).join('')||'<tr><td class="l" colspan="6">No one on enhanced observation.</td></tr>'}</tbody></table></div>
+ <details style="margin-top:14px"><summary>Ended (${rows.length-live.length})</summary><div class="scroll"><table><tbody>${rows.filter(r=>r.ended_on).map(r=>`<tr><td class="l">${esc(r.ref)}</td><td class="l">${esc(r.level)}</td><td>${esc(r.started_on)} – ${esc(r.ended_on)}</td><td class="l">${esc(r.funded)}</td></tr>`).join('')}</tbody></table></div></details></div></div>`;
+ const upd=async(id,o)=>{await q(sv.from('st_obs').update({...o,email:me.email.toLowerCase(),updated_at:new Date().toISOString()}).eq('id',id));render()};
+ v.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>upd(b.dataset.rev,{last_review:new Date().toISOString(),reviewed_by:me.email.toLowerCase()}));
+ v.querySelectorAll('[data-end]').forEach(b=>b.onclick=()=>{if(b.dataset.sure)upd(b.dataset.end,{ended_on:iso(new Date())});else{b.dataset.sure=1;b.textContent='Tap again to end'}});
+ $('oSave').onclick=async()=>{const ref=$('oRef').value.trim();if(!ref){$('oMsg').textContent='Add initials or a reference.';return}
+  try{await q(sv.from('st_obs').insert({unit:u.unit,ref,level:$('oLevel').value,reason:$('oReason').value.trim()||null,started_on:$('oStart').value,funded:$('oFund').value,commissioner:$('oComm').value.trim()||null,last_review:new Date().toISOString(),reviewed_by:me.email.toLowerCase(),email:me.email.toLowerCase()}));render()}catch(e){$('oMsg').textContent='Not saved: '+e.message}};
+}
+// ---------- huddle
+async function huddle(v){
+ const u=unitOf(UNIT);const rows=await q(sv.from('st_huddle').select('*').eq('unit',u.unit).order('day',{ascending:false}).order('shift').limit(28));
+ const wd=await weekData(),s=unitState(u,wd);const hr=new Date().getHours(),shift=hr>=7&&hr<19?'Day':'Night';
+ v.innerHTML=`<div class="grid"><div class="panel"><h2>Shift huddle</h2>
+ <div class="row" style="margin-top:0"><input type="date" id="hDay" value="${iso(new Date())}" style="width:auto"><select id="hShift" style="width:auto"><option ${shift==='Day'?'selected':''}>Day</option><option ${shift==='Night'?'selected':''}>Night</option></select></div>
+ <label class="f" for="hPeople">People in the unit now</label><input type="number" id="hPeople" min="0" value="${s.occ??''}">
+ <label class="f" for="hRn">Registered nurses on this shift</label><input type="number" id="hRn" min="0" step="0.5">
+ <label class="f" for="hCare">Care / support staff on this shift</label><input type="number" id="hCare" min="0" step="0.5">
+ <p class="hint" id="hPlan"></p>
+ <label class="f">Red flags</label><div class="check" id="hFlags">${FLAGS.map((f,i)=>`<label><input type="checkbox" value="${esc(f)}" id="hf${i}"> ${esc(f)}</label>`).join('')}</div>
+ <label class="f" for="hExtra">Extra staff requested</label><input type="number" id="hExtra" min="0" value="0">
+ <label class="f" for="hAppr">Approved by (on-call or clinical lead)</label><input type="text" id="hAppr">
+ <label class="f" for="hNote">Note</label><textarea id="hNote"></textarea>
+ <div class="row"><button class="btn" id="hSave" type="button">Save huddle</button><span class="note" id="hMsg"></span></div></div>
+ <div><h2>Recent shifts</h2><p class="note"><b>Safety floor:</b> ${esc(u.floor)}. Extra staff above the plan need a red flag and an approver.</p>
+ <div class="scroll"><table><thead><tr><th class="l">Shift</th><th>People</th><th>Nurses</th><th>Care</th><th class="l">Red flags</th><th>Extra</th><th class="l">Approved</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="l">${esc(r.day)} ${esc(r.shift)}</td><td>${r.people??''}</td><td>${r.rn_on??''}</td><td>${r.care_on??''}</td><td class="l ${r.flags.length?'over':''}">${esc(r.flags.join('; '))}</td><td>${r.extra_requested||''}</td><td class="l">${esc(r.approved_by||'')}</td></tr>`).join('')||'<tr><td class="l" colspan="7">No huddles saved yet.</td></tr>'}</tbody></table></div></div></div>`;
+ const plan=()=>{const m=need(u,+$('hPeople').value||0,s.e.hpd);const sh=m.s.find(([k])=>$('hShift').value==='Day'?/day|early|centre|visit/i.test(k):/night|sleep/i.test(k));$('hPlan').textContent=sh?`Planned for ${$('hPeople').value||0} people: ${sh[1]}`:''};
+ const load=()=>{const r=rows.find(x=>x.day===$('hDay').value&&x.shift===$('hShift').value);if(r){$('hPeople').value=r.people??'';$('hRn').value=r.rn_on??'';$('hCare').value=r.care_on??'';FLAGS.forEach((f,i)=>$('hf'+i).checked=r.flags.includes(f));$('hExtra').value=r.extra_requested;$('hAppr').value=r.approved_by||'';$('hNote').value=r.note||''}plan()};
+ ['hDay','hShift'].forEach(id=>$(id).onchange=load);$('hPeople').oninput=plan;load();
+ $('hSave').onclick=async()=>{const flags=FLAGS.filter((f,i)=>$('hf'+i).checked),extra=+$('hExtra').value||0;
+  if(extra&&(!flags.length||!$('hAppr').value.trim())){$('hMsg').textContent='Extra staff need a red flag and an approver.';return}
+  try{await q(sv.from('st_huddle').upsert({unit:u.unit,day:$('hDay').value,shift:$('hShift').value,people:$('hPeople').value===''?null:+$('hPeople').value,rn_on:$('hRn').value===''?null:+$('hRn').value,care_on:$('hCare').value===''?null:+$('hCare').value,flags,extra_requested:extra,approved_by:$('hAppr').value.trim()||null,note:$('hNote').value.trim()||null,email:me.email.toLowerCase()},{onConflict:'unit,day,shift'}));render()}catch(e){$('hMsg').textContent='Not saved: '+e.message}};
+}
+// ---------- overview (admin, inviters)
+async function overview(v){
+ const wd=await weekData();let tn=0,tr=0,tp=0,red=0;
+ const rows=UNITS.map(u=>{const s=unitState(u,wd);const p=s.over*52/12*(RATES[u.unit]||0);if(!['grey'].includes(s.c)){tn+=s.m.h;tr+=s.rota;tp+=p}if(s.c==='red'||s.c==='amber')red++;
+  return `<tr data-go="${esc(u.unit)}" style="cursor:pointer"><td><span class="dot c-${s.c}"></span> ${esc(u.name)}</td><td>${s.occ??'<span class="note">not entered</span>'}</td><td>${fmt(s.m.h)}</td><td>${fmt(s.rota)}</td><td class="${s.over>s.m.h*.05?'over':''}">${s.over>=0?'+':'−'}${fmt(Math.abs(s.over))}</td><td>${RATES[u.unit]!=null?(s.over<0?'−':'')+money(p):''}</td><td>${s.w.unfilled_last??''}</td><td>${s.w.agency_last??''}</td><td class="l">${esc(s.t)}</td><td class="l note">${esc(s.e.email&&s.e.email!=='seed@nouvita.co.uk'?s.e.email:'')}</td></tr>`}).join('');
+ v.innerHTML=`<h2>${red} units planned above establishment: ${fmt(tr-tn)} hours a week, ${money(tp)} a month</h2>
+ <p class="note">People and rota hours are the manager's figures for the week where saved, otherwise the Sona plan from the Monday rota check. Click a unit to open its planner.</p>
+ <div class="scroll"><table><thead><tr><th>Unit</th><th>People</th><th>Needed h</th><th>Rota h</th><th>Over / under</th><th>£ a month</th><th>Unfilled last wk</th><th>Agency last wk</th><th class="l">Flag</th><th class="l">Saved by</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>All units</td><td></td><td>${fmt(tn)}</td><td>${fmt(tr)}</td><td>${tr-tn>=0?'+':'−'}${fmt(Math.abs(tr-tn))}</td><td>${money(tp)}</td><td colspan="4"></td></tr></tfoot></table></div>
+ ${ROLE==='admin'?`<div class="panel" style="margin-top:20px"><h2>Load the Monday rota check</h2><p class="note">Choose the rota_check_&lt;date&gt;.csv made by the weekly script on the Hetzner box. It updates each unit's Sona figures for that week.</p><input type="file" id="csv" accept=".csv"><p class="note" id="csvMsg"></p></div>`:''}`;
+ v.querySelectorAll('[data-go]').forEach(r=>r.onclick=()=>{UNIT=r.dataset.go;TAB='planner';render()});
+ if($('csv'))$('csv').onchange=async e=>{const f=e.target.files[0];if(!f)return;const lines=(await f.text()).trim().split(/\r?\n/).map(l=>{const out=[];let cur='',qq=false;for(const ch of l){if(ch==='"'){qq=!qq}else if(ch===','&&!qq){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out});
+  const h=lines[0],ix=k=>h.indexOf(k);if(ix('unit_key')<0||ix('week')<0){$('csvMsg').textContent='This is not a rota check file (no week or unit_key column).';return}
+  const rows=lines.slice(1).filter(r=>unitOf(r[ix('unit_key')])).map(r=>({unit:r[ix('unit_key')],week:r[ix('week')],plan_this:+r[ix('plan_this')],plan_next:+r[ix('plan_next')],plan_last:+r[ix('plan_last')],worked_last:+r[ix('worked_last')],unfilled_last:+r[ix('unfilled_last')],agency_last:+r[ix('agency_last')],loaded_at:new Date().toISOString()}));
+  try{await q(sv.from('st_week').upsert(rows,{onConflict:'unit,week'}));CACHE={};$('csvMsg').textContent=`Loaded ${rows.length} units for the week of ${rows[0]?.week}.`;setTimeout(render,800)}catch(e){$('csvMsg').textContent='Not loaded: '+e.message}};
+}
+// ---------- people (same access list as the care homes questionnaire)
+async function people(v){
+ const inv=await q(sv.from('ch_invite').select('email,role,homes,name,granted_by').order('created_at'));
+ v.innerHTML=`<div class="grid"><div class="panel"><h2>Invite a manager</h2><p class="note">They sign in with their Nouvita Microsoft account and go straight to the units you tick. The same list gives access to the care homes questionnaire.</p>
+ <label class="f" for="iEmail">Nouvita email</label><input type="text" id="iEmail" placeholder="firstname.lastname@nouvita.co.uk">
+ <label class="f" for="iName">Name and role</label><input type="text" id="iName">
+ ${ROLE==='admin'?`<label class="f" for="iRole">Role</label><select id="iRole"><option value="contributor">Manager: their units only</option><option value="inviter">Inviter: can invite others</option></select>`:''}
+ <label class="f">Units</label><div class="check">${UNITS.map(u=>`<label><input type="checkbox" value="${esc(u.unit)}"> ${esc(u.unit)}</label>`).join('')}</div>
+ <div class="row"><button class="btn" id="iAdd" type="button">Invite</button></div><p class="note" id="iMsg"></p>
+ <p class="note">Link to send: <b>${esc(location.origin+location.pathname)}</b></p></div>
+ <div><h2>People with access</h2><div class="scroll"><table><tbody>${inv.map(i=>`<tr><td class="l"><b>${esc(i.name||i.email)}</b><br><span class="note">${esc(i.email)}</span></td><td class="l">${esc(i.role)}</td><td class="l">${i.homes?esc(i.homes.join(', ')):'all units'}</td><td>${(ROLE==='admin'&&i.role!=='admin')||(i.role==='contributor'&&i.granted_by===me.email.toLowerCase())?`<button class="btn ghost small" data-rm="${esc(i.email)}" type="button">Remove</button>`:''}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+ $('iAdd').onclick=async()=>{const e=$('iEmail').value.trim().toLowerCase(),homes=[...v.querySelectorAll('.check input:checked')].map(x=>x.value),role=$('iRole')?.value||'contributor';
+  if(!/^[^@\s]+@nouvita\.co\.uk$/.test(e)){$('iMsg').textContent='Use a Nouvita email address.';return}if(role==='contributor'&&!homes.length){$('iMsg').textContent='Tick at least one unit.';return}
+  try{await q(sv.from('ch_invite').insert({email:e,role,homes:homes.length?homes:null,name:$('iName').value.trim()||null,granted_by:me.email.toLowerCase()}));render()}catch(x){$('iMsg').textContent=/duplicate|unique/i.test(x.message)?'Already on the list.':'Not added: '+x.message}};
+ v.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Tap again';return}try{await q(sv.from('ch_invite').delete().eq('email',b.dataset.rm));render()}catch(e){alert(e.message)}});
+}
+// ---------- start
+(async()=>{
+ if(!window.supabase){gate('This page could not load its sign-in library. Check your connection and refresh.',false);return}
+ sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'pkce',storageKey:'nouvita-staffing-auth'}});
+ sv=sb.schema('nouvita_survey');
+ $('signIn').onclick=async()=>{const {error}=await sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo:location.origin+location.pathname}});if(error){$('gateErr').textContent=error.message;$('gateErr').hidden=false}};
+ $('signOut').onclick=async()=>{await sb.auth.signOut();location.replace(location.pathname)};
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){gate('Sign in with your Nouvita Microsoft account to open your unit\'s staffing planner.');return}
+ me=session.user;
+ const {data:role,error}=await sv.rpc('ch_access');
+ if(error){gate(esc(error.message),false);return}
+ if(!role){gate(`Signed in as <b>${esc(me.email)}</b>, but this account has not been given access. Ask your manager or the finance team.`,false);return}
+ ROLE=role;
+ try{UNITS=await q(sv.from('st_unit').select('*').order('sort'));const r=await q(sv.from('st_rate').select('*'));RATES=Object.fromEntries(r.map(x=>[x.unit,x.rate]));const c=await q(sv.from('st_config').select('*'));BANDS=(c.find(x=>x.key==='dependency_bands')||{}).value||[]}
+ catch(e){gate(/schema must be one of|does not exist/i.test(e.message)?'Not set up yet. Please tell the finance team.':esc(e.message),false);return}
+ if(!UNITS.length){gate('Your account has no units assigned yet. Ask the finance team.',false);return}
+ $('gate').hidden=true;$('app').hidden=false;
+ $('whoami').textContent=me.email+' · '+({admin:'admin',inviter:'all units',contributor:UNITS.map(u=>u.unit).join(', ')}[ROLE]);
+ UNIT=isMgr()?'__all':UNITS[0].unit; TAB=isMgr()?'overview':'planner';
+ $('chips').onclick=e=>{const b=e.target.closest('[data-u]');if(b){UNIT=b.dataset.u;render()}};
+ $('tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(b){TAB=b.dataset.t;render()}};
+ $('wkPrev').onclick=()=>{WEEK=new Date(WEEK.getTime()-7*864e5);render()};$('wkNext').onclick=()=>{WEEK=new Date(WEEK.getTime()+7*864e5);render()};
+ render();
+})();
+}
+</script>
+</body>
+</html>
