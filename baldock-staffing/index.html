@@ -212,7 +212,7 @@ const SUPABASE_URL='https://tdhggqurzrmlchzthkrw.supabase.co';
 const SUPABASE_KEY='sb_publishable_1CT22NudqbxuFN3DqqVRig_vbCm-pdU'; // publishable (anon) key only
 const SURVEY='baldock-oct-nov-2026';
 const WARDS=['Burberry','Mulberry','Oakley'];
-const TPL={"Nov": {"Burberry": {"Day": {"nurses": [1.4, 0.6], "oneone": [2.6, 2.4], "support": [1.4, 1.4]}, "Night": {"nurses": [0.6, 0.6], "oneone": [3.2, 2.4], "support": [0.8, 0.8]}}, "Central": {"Day": {"support": [0.1, 0.1]}, "Night": {"nightmgr": [0.9, 0.5], "support": [0.3, 0.3]}}, "Mulberry": {"Day": {"nurses": [1.4, 1.1], "oneone": [2.9, 2.6], "support": [0.3, 0.3]}, "Night": {"nurses": [1.8, 1.4], "oneone": [1.7, 1.4], "support": [1.4, 1.4]}}, "Oakley": {"Day": {"nurses": [0.0, 0.0], "oneone": [0.4, 0.0], "support": [0.3, 0.3]}, "Night": {"nurses": [0.1, 0.1], "oneone": [0.2, 0.2], "support": [0.4, 0.4]}}}, "Nov planned": {"Burberry": {"Day": {"nurses": [1.3, 0.4], "oneone": [2.8, 2.7], "support": [0.6, 0.3]}, "Night": {"nurses": [0.4, 0.2], "oneone": [3.3, 2.5]}}, "Central": {"Night": {"nightmgr": [1.0, 1.0]}}, "Mulberry": {"Day": {"nurses": [2.0, 1.3], "oneone": [2.7, 2.5], "support": [0.1, 0.1]}, "Night": {"nurses": [2.0, 1.3], "oneone": [1.7, 1.3], "support": [1.0, 1.0]}}, "Oakley": {"Day": {"oneone": [0.6, 0.2], "support": [0.3, 0.3]}, "Night": {"nurses": [0.2, 0.2], "oneone": [0.7, 0.7], "support": [0.4, 0.4]}}}, "Oct": {"Burberry": {"Day": {"nurses": [0.9, 0.6], "oneone": [3.2, 2.9], "support": [1.2, 1.1]}, "Night": {"nurses": [0.4, 0.4], "oneone": [2.7, 2.1], "support": [1.0, 1.0]}}, "Central": {"Day": {"nurses": [0.0, 0.0], "oneone": [0.1, 0.1], "support": [0.4, 0.4]}, "Night": {"nightmgr": [1.1, 1.0], "support": [0.1, 0.1]}}, "Mulberry": {"Day": {"nurses": [2.1, 1.4], "oneone": [2.5, 2.3], "support": [1.1, 1.0]}, "Night": {"nurses": [2.0, 1.4], "oneone": [2.5, 1.8], "support": [1.3, 1.3]}}, "Oakley": {"Day": {"oneone": [0.5, 0.0]}}}};
+const TPL={}; // Sona shift figures: loaded after sign-in from nouvita_survey.survey_fact (row level security), never written into this page
 const DAYS=[];for(let d=new Date(Date.UTC(2026,9,1));d<=new Date(Date.UTC(2026,10,30));d.setUTCDate(d.getUTCDate()+1))DAYS.push(d.toISOString().slice(0,10));
 const fmt=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
 const QS=[
@@ -373,7 +373,7 @@ const {data:role,error:rErr}=await sv.rpc('my_access');
 if(rErr){gate(/schema must be one of|Invalid schema/i.test(rErr.message)?'Not set up yet: the questionnaire area is not switched on. Please tell the finance team.':esc(rErr.message),false);return}
 if(!role){gate(`Signed in as <b>${esc(me.email)}</b>, but this account is not on the list for this questionnaire. Please ask the finance team to add you.`,false);
 const b=document.createElement('button');b.className='btn ghost';b.textContent='Sign out';b.onclick=$('#signOut').onclick;$('#gate').appendChild(b);return}
-$('#gate').hidden=true;$('#app').hidden=false;ROLE=role;
+$('#gate').hidden=true;$('#app').hidden=false;ROLE=role;{const {data:fx}=await sv.from('survey_fact').select('tpl').eq('survey',SURVEY).maybeSingle();if(fx&&fx.tpl)Object.assign(TPL,fx.tpl)}
 $('#whoami').textContent=me.email+' · '+({admin:'admin',inviter:'can invite',contributor:'contributor'}[role]||role);
 async function loadOthers(){const {data:all,error}=await sv.from('answer').select('user_id,email,status,updated_at,data').eq('survey',SURVEY);
 if(error)return null;OTH=(all||[]).filter(r=>r.user_id!==me.id);return all}
